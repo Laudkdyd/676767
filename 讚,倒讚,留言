@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<style>
+  .interaction-group { display: flex; gap: 30px; align-items: flex-start; }
+  .btn-wrapper { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 60px; }
+  
+  .icon-btn { background: none; border: none; cursor: pointer; padding: 10px; transition: transform 0.2s; }
+  .icon-btn:active { transform: scale(0.9); }
+  .icon-svg { fill: white; stroke: black; stroke-width: 2; width: 40px; height: 40px; }
+
+  /* 選中狀態樣式 */
+  .heart.active .icon-svg { fill: red; stroke: red; }
+  .dislike.active .icon-svg { fill: gray; stroke: gray; }
+
+  .label { font-family: Arial, sans-serif; font-size: 12px; color: #606060; font-weight: 500; }
+  .comment-link { text-decoration: none; display: flex; flex-direction: column; align-items: center; }
+</style>
+</head>
+<body>
+
+<div class="interaction-group">
+  <div class="btn-wrapper">
+    <button id="heart-btn" class="icon-btn heart" onclick="toggleReaction('heart')">
+      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+    </button>
+    <span id="heart-count" class="label">120</span>
+  </div>
+
+  <a href="https://example.com/comments" class="comment-link">
+    <button class="icon-btn">
+      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg>
+    </button>
+    <span class="label">留言</span>
+  </a>
+
+  <div class="btn-wrapper">
+    <button id="dislike-btn" class="icon-btn dislike" onclick="toggleReaction('dislike')">
+      <svg class="icon-svg" viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>
+    </button>
+    <span class="label">不喜歡</span>
+  </div>
+</div>
+
+<script>
+  function toggleReaction(type) {
+    const heartBtn = document.getElementById('heart-btn');
+    const dislikeBtn = document.getElementById('dislike-btn');
+    const countEl = document.getElementById('heart-count');
+    
+    // 檢查切換前的狀態
+    const wasHeartActive = heartBtn.classList.contains('active');
+    
+    const currentBtn = document.getElementById(type + '-btn');
+    const isAlreadyActive = currentBtn.classList.contains('active');
+
+    // 1. 先清除所有按鈕的 active 狀態
+    [heartBtn, dislikeBtn].forEach(btn => btn.classList.remove('active'));
+
+    // 2. 邏輯處理
+    if (isAlreadyActive) {
+      // 若點擊原本已經啟用的按鈕，則取消啟用 (若為愛心則減一)
+      if (type === 'heart') countEl.innerText = parseInt(countEl.innerText) - 1;
+    } else {
+      // 若點擊新的按鈕，則啟用它
+      currentBtn.classList.add('active');
+      
+      // 如果點的是愛心，數量加一
+      if (type === 'heart') {
+        countEl.innerText = parseInt(countEl.innerText) + 1;
+      } 
+      // 如果原本是愛心，現在改選別的 (例如倒讚)，則愛心數量減一
+      else if (wasHeartActive) {
+        countEl.innerText = parseInt(countEl.innerText) - 1;
+      }
+    }
+  }
+</script>
+
+</body>
+</html>
