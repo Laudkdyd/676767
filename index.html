@@ -3,259 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>676767</title>
 <style>
-  /* 基礎設定 */
   body { 
-    background-color: #f0f2f5; margin: 0; padding-bottom: 120px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #f0f2f5; margin: 0; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
     display: flex; flex-direction: column; align-items: center; 
   }
+  
   .header { 
-    width: 100%; background: white; padding: 15px 0; text-align: center; 
-    font-weight: bold; position: sticky; top: 0; z-index: 500; 
+    width: 100%; background: white; padding: 15px; text-align: center; 
+    font-weight: bold; position: sticky; top: 0; z-index: 10; 
     box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
   }
 
-  /* 貼文卡片設計 */
+  /* 貼文卡片 */
   .post-card { 
-    background: white; width: 92%; max-width: 500px; 
-    border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
-    margin: 20px 0; overflow: hidden; animation: fadeIn 0.4s ease;
+    background: white; width: 100%; max-width: 500px; 
+    border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+    margin: 20px 0; overflow: hidden; 
   }
   .post-image { 
-    width: 100%; height: 220px; background: linear-gradient(135deg, #e0e0e0, #cfd8dc);
-    display: flex; align-items: center; justify-content: center; color: #546e7a; font-weight: bold;
+    width: 100%; height: 300px; background-color: #eee; 
+    display: flex; align-items: center; justify-content: center; 
+    color: #aaa; font-size: 18px;
   }
-  .post-content { padding: 18px; border-bottom: 1px solid #f0f0f0; line-height: 1.6; color: #1c1e21; }
+  .post-content { padding: 15px; border-bottom: 1px solid #eee; line-height: 1.5; }
 
-  /* 互動功能列 (愛心、留言、倒讚) */
-  .action-bar { display: flex; gap: 20px; padding: 12px 18px; }
-  .action-item { display: flex; flex-direction: column; align-items: center; width: 50px; }
-  .icon-btn { 
-    background: none; border: none; cursor: pointer; padding: 8px; 
-    border-radius: 50%; transition: background 0.2s; 
-  }
-  .icon-btn:hover { background: #f5f5f5; }
-  .icon-svg { fill: white; stroke: #262626; stroke-width: 2; width: 24px; height: 24px; transition: 0.2s; }
-  
-  /* 狀態切換 */
-  .heart.active .icon-svg { fill: #ff3040; stroke: #ff3040; }
-  .dislike.active .icon-svg { fill: #000; stroke: #000; }
-  .count-label { font-size: 12px; color: #65676b; margin-top: 2px; }
-
-  /* 左下角發文按鈕 (最重要！) */
-  .fab-button {
-    position: fixed; left: 25px; bottom: 35px; width: 64px; height: 64px;
-    background: #000; color: white; border-radius: 50%; border: none;
-    font-size: 32px; cursor: pointer; z-index: 9999;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;
-    transition: transform 0.2s;
-  }
-  .fab-button:active { transform: scale(0.9); }
-
-  /* 底部抽屜面板 (Bottom Sheet) */
-  .sheet-mask { 
-    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    background: rgba(0,0,0,0.5); z-index: 10000; 
-  }
-  .bottom-sheet {
-    position: fixed; bottom: -100%; left: 0; width: 100%; height: 75vh;
-    background: white; border-top-left-radius: 24px; border-top-right-radius: 24px;
-    z-index: 10001; transition: bottom 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-    display: flex; flex-direction: column;
-  }
-  .show-panel .sheet-mask { display: block; }
-  .show-panel .bottom-sheet { bottom: 0; }
-
-  .sheet-header { 
-    padding: 16px 24px; border-bottom: 1px solid #eee; 
-    display: flex; justify-content: space-between; align-items: center; font-weight: bold; 
-  }
-  .sheet-body { flex: 1; padding: 20px; overflow-y: auto; }
-  .sheet-footer { padding: 15px 24px; border-top: 1px solid #eee; display: flex; align-items: center; gap: 12px; }
-
-  /* 輸入框與按鈕 */
-  textarea { width: 100%; border: none; outline: none; font-size: 17px; resize: none; font-family: inherit; }
-  .submit-btn { 
-    background: none; border: none; color: #0095f6; font-weight: bold; 
-    font-size: 16px; cursor: pointer; opacity: 0.3; pointer-events: none; 
-  }
-  .submit-btn.ready { opacity: 1; pointer-events: auto; }
-
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-</style>
-</head>
-<body id="app-root">
-
-<div class="header">Threads</div>
-
-<!-- 貼文流 -->
-<div id="main-feed">
-  <div class="post-card" data-post-id="start-0">
-    <div class="post-image" style="background: #fdf2f2;">系統公告</div>
-    <div class="action-bar">
-      <div class="action-item">
-        <button class="icon-btn heart" onclick="handleReaction(this, 'heart')"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
-        <span class="count-label like-num">12</span>
-      </div>
-      <div class="action-item">
-        <button class="icon-btn" onclick="openCommentPanel(this)"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg></button>
-        <span class="count-label comment-num">0</span>
-      </div>
-      <div class="action-item">
-        <button class="icon-btn dislike" onclick="handleReaction(this, 'dislike')"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg></button>
-        <span class="count-label">不喜歡</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="bottom-trigger" style="height: 50px;"></div>
-
-<!-- 左下角發文按鈕 -->
-<button class="fab-button" onclick="showPanel('post-panel')">＋</button>
-
-<!-- 發文面板 -->
-<div id="post-panel" class="sheet-mask" onclick="hideAll()"></div>
-<div id="post-sheet" class="bottom-sheet">
-  <div class="sheet-header"><span>建立新串文</span><span onclick="hideAll()" style="font-weight:normal; cursor:pointer;">關閉</span></div>
-  <div class="sheet-body">
-    <textarea id="post-textarea" placeholder="分享你的想法..." rows="10" oninput="checkInput('post-textarea', 'post-confirm')"></textarea>
-  </div>
-  <div class="sheet-footer" style="justify-content: flex-end;">
-    <button id="post-confirm" class="submit-btn" onclick="addNewPost()">發布</button>
-  </div>
-</div>
-
-<!-- 留言面板 -->
-<div id="comment-panel" class="sheet-mask" onclick="hideAll()"></div>
-<div id="comment-sheet" class="bottom-sheet">
-  <div class="sheet-header"><span>回覆貼文</span><span onclick="hideAll()" style="font-weight:normal; cursor:pointer;">關閉</span></div>
-  <div id="comment-list" class="sheet-body"></div>
-  <div class="sheet-footer">
-    <input id="comment-input" placeholder="撰寫回覆..." style="flex:1; border:none; background:#f0f2f5; padding:12px; border-radius:25px; outline:none;" oninput="checkInput('comment-input', 'comment-confirm')">
-    <button id="comment-confirm" class="submit-btn" onclick="addNewComment()">發布</button>
-  </div>
-</div>
-
-<script>
-  let activePost = null;
-  const commentDb = {}; // 模擬儲存各貼文留言
-
-  // 1. 面板控制
-  function showPanel(id) {
-    document.getElementById('app-root').classList.add('show-panel');
-    document.getElementById(id).style.display = 'block';
-    if(id === 'post-panel') document.getElementById('post-sheet').style.bottom = '0';
-    else document.getElementById('comment-sheet').style.bottom = '0';
-  }
-
-  function hideAll() {
-    document.getElementById('app-root').classList.remove('show-panel');
-    document.querySelectorAll('.sheet-mask').forEach(m => m.style.display = 'none');
-    document.querySelectorAll('.bottom-sheet').forEach(s => s.style.bottom = '-100%');
-  }
-
-  function checkInput(inputId, btnId) {
-    const val = document.getElementById(inputId).value.trim();
-    document.getElementById(btnId).classList.toggle('ready', val.length > 0);
-  }
-
-  // 2. 愛心與倒讚互動 (互斥)
-  function handleReaction(btn, type) {
-    const card = btn.closest('.post-card');
-    const heart = card.querySelector('.heart');
-    const dislike = card.querySelector('.dislike');
-    const num = card.querySelector('.like-num');
-
-    if (type === 'heart') {
-      if (heart.classList.contains('active')) {
-        heart.classList.remove('active');
-        num.innerText = parseInt(num.innerText) - 1;
-      } else {
-        heart.classList.add('active');
-        dislike.classList.remove('active');
-        num.innerText = parseInt(num.innerText) + 1;
-      }
-    } else {
-      if (dislike.classList.contains('active')) {
-        dislike.classList.remove('active');
-      } else {
-        dislike.classList.add('active');
-        if (heart.classList.contains('active')) {
-          heart.classList.remove('active');
-          num.innerText = parseInt(num.innerText) - 1;
-        }
-      }
-    }
-  }
-
-  // 3. 發布新貼文
-  function addNewPost() {
-    const txt = document.getElementById('post-textarea').value.trim();
-    const id = 'p-' + Date.now();
-    const html = `
-      <div class="post-card" data-post-id="${id}">
-        <div class="post-image" style="background:hsl(${Math.random()*360}, 40%, 90%)">最新串文</div>
-        <div class="post-content">${txt.replace(/\n/g, '<br>')}</div>
-        <div class="action-bar">
-          <div class="action-item">
-            <button class="icon-btn heart" onclick="handleReaction(this, 'heart')"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
-            <span class="count-label like-num">0</span>
-          </div>
-          <div class="action-item">
-            <button class="icon-btn" onclick="openCommentPanel(this)"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg></button>
-            <span class="count-label comment-num">0</span>
-          </div>
-          <div class="action-item">
-            <button class="icon-btn dislike" onclick="handleReaction(this, 'dislike')"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg></button>
-            <span class="count-label">不喜歡</span>
-          </div>
-        </div>
-      </div>`;
-    document.getElementById('main-feed').insertAdjacentHTML('afterbegin', html);
-    document.getElementById('post-textarea').value = '';
-    hideAll();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  // 4. 留言功能
-  function openCommentPanel(btn) {
-    activePost = btn.closest('.post-card');
-    const id = activePost.dataset.postId;
-    const list = document.getElementById('comment-list');
-    const items = commentDb[id] || [];
-    list.innerHTML = items.length ? items.map(t => `<div style="padding:15px; border-bottom:1px solid #eee;">${t}</div>`).reverse().join('') : '<div style="text-align:center; padding:40px; color:#ccc;">快來搶頭香...</div>';
-    showPanel('comment-panel');
-  }
-
-  function addNewComment() {
-    const input = document.getElementById('comment-input');
-    const id = activePost.dataset.postId;
-    if(!commentDb[id]) commentDb[id] = [];
-    commentDb[id].push(input.value.trim());
-    activePost.querySelector('.comment-num').innerText = commentDb[id].length;
-    input.value = '';
-    hideAll();
-  }
-
-  // 5. 無限滾動
-  const scrollObs = new IntersectionObserver(es => {
-    if(es[0].isIntersecting) {
-      const demo = document.querySelector('.post-card').cloneNode(true);
-      demo.querySelector('.like-num').innerText = Math.floor(Math.random()*50);
-      demo.querySelector('.comment-num').innerText = '0';
-      demo.querySelector('.heart').classList.remove('active');
-      demo.querySelector('.dislike').classList.remove('active');
-      document.getElementById('main-feed').appendChild(demo);
-    }
-  }, {threshold: 0.1});
-  scrollObs.observe(document.getElementById('bottom-trigger'));
-</script>
-
-</body>
-</html>  .icon-svg { fill: white; stroke: black; stroke-width: 2; width: 28px; height: 28px; }
+  /* 互動列 */
+  .interaction-group { display: flex; gap: 30px; padding: 10px 15px; }
+  .btn-wrapper { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 60px; }
+  .icon-btn { background: none; border: none; cursor: pointer; padding: 8px; transition: 0.2s; }
+  .icon-btn:active { transform: scale(0.9); }
+  .icon-svg { fill: white; stroke: black; stroke-width: 2; width: 28px; height: 28px; }
 
   /* 狀態變色 */
   .heart.active .icon-svg { fill: #ff3040; stroke: #ff3040; }
@@ -292,7 +71,7 @@
 </head>
 <body id="main-body">
 
-<div class="header">676767</div>
+<div class="header">社群互動動態</div>
 
 <div id="feed">
   <div class="post-card" data-post-id="1">
@@ -463,7 +242,7 @@
     }
   });
   observer.observe(document.getElementById('load-more'));
-</script>
 
+</script>
 </body>
 </html>
