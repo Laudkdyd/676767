@@ -7,7 +7,8 @@
   body { 
     background-color: #f0f2f5; margin: 0; 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-    display: flex; flex-direction: column; align-items: center; 
+    display: flex; flex-direction: column; align-items: center;
+    padding-bottom: 70px; /* 留空間給底部固定導覽列 */
   }
   
   .header { 
@@ -21,13 +22,14 @@
     background: white; width: 100%; max-width: 500px; 
     border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
     margin: 20px 0; overflow: hidden; 
+    animation: fadeIn 0.3s;
   }
   .post-image { 
-    width: 100%; height: 300px; background-color: #eee; 
+    width: 100%; height: 260px; background-color: #e9ecef; 
     display: flex; align-items: center; justify-content: center; 
-    color: #aaa; font-size: 18px;
+    color: #212529; font-size: 20px; font-weight: 500; padding: 25px; box-sizing: border-box; text-align: center;
+    line-height: 1.6; word-break: break-all;
   }
-  .post-content { padding: 15px; border-bottom: 1px solid #eee; line-height: 1.5; }
 
   /* 互動列 */
   .interaction-group { display: flex; gap: 30px; padding: 10px 15px; }
@@ -41,9 +43,9 @@
   .dislike.active .icon-svg { fill: #000; stroke: #000; }
   .label { font-size: 12px; color: #606060; font-weight: 500; }
 
-  /* --- Threads 留言面板 --- */
-  #comment-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 100; }
-  #comment-sheet {
+  /* --- Threads 底部面板通用樣式 --- */
+  .backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 100; }
+  .bottom-sheet {
     position: fixed; bottom: -100%; left: 0; width: 100%; height: 75vh;
     background: white; border-top-left-radius: 20px; border-top-right-radius: 20px;
     z-index: 101; transition: bottom 0.3s ease-out; display: flex; flex-direction: column;
@@ -51,31 +53,49 @@
   .sheet-handle { width: 40px; height: 5px; background: #e0e0e0; border-radius: 10px; margin: 10px auto; }
   .sheet-header { padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; font-weight: bold; }
   
-  /* 留言清單內容區 */
+  /* 內容區 */
   .sheet-body { flex: 1; overflow-y: auto; padding: 15px; }
   .comment-item { padding: 10px; border-bottom: 1px solid #f9f9f9; font-size: 14px; line-height: 1.4; color: #333; animation: fadeIn 0.3s; }
   .no-comments { color: #aaa; text-align: center; margin-top: 50px; }
 
   /* 置底輸入框 */
   .sheet-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; align-items: center; gap: 10px; background: white; }
-  .comment-input { flex: 1; background: #f0f0f0; border: none; padding: 12px 15px; border-radius: 20px; outline: none; }
-  .post-btn { color: #0095f6; border:none; background:none; font-weight:bold; cursor:pointer; opacity: 0.5; }
-  .post-btn.active { opacity: 1; }
+  .comment-input, .post-textarea { flex: 1; background: #f0f0f0; border: none; padding: 12px 15px; border-radius: 20px; outline: none; font-size: 14px; }
+  
+  /* 發布貼文專用的多行輸入框 */
+  .post-textarea { border-radius: 12px; height: 150px; resize: none; font-family: inherit; line-height: 1.5; }
 
-  .sheet-open #comment-sheet { bottom: 0; }
-  .sheet-open #comment-backdrop { display: block; }
+  .action-btn { color: #0095f6; border:none; background:none; font-weight:bold; cursor:pointer; opacity: 0.5; font-size: 14px; }
+  .action-btn.active { opacity: 1; }
+
+  /* 控制顯示面板 */
+  .sheet-open-comment #comment-sheet, .sheet-open-post #post-sheet { bottom: 0; }
+  .sheet-open-comment #comment-backdrop, .sheet-open-post #post-backdrop { display: block; }
 
   @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
   #load-more { padding: 30px; color: #888; font-size: 14px; }
+
+  /* --- 仿 Threads 底部常駐導覽列 --- */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; width: 100%; background: white;
+    box-shadow: 0 -1px 5px rgba(0,0,0,0.05); display: flex; justify-content: center;
+    align-items: center; padding: 10px 0; z-index: 90;
+  }
+  .nav-btn {
+    background: none; border: none; cursor: pointer; padding: 10px 20px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-icon { width: 28px; height: 28px; fill: none; stroke: #111; stroke-width: 2; }
 </style>
 </head>
 <body id="main-body">
 
-<div class="header">社群互動動態</div>
+<div class="header">676767</div>
 
+<!-- 動態流 -->
 <div id="feed">
-  <div class="post-card" data-post-id="1">
-    <div class="post-image">貼文 #1</div>
+  <div class="post-card" data-post-id="initial-1">
+    <div class="post-image" style="background-color: #e3f2fd;"></div>
     <div class="interaction-group">
       <div class="btn-wrapper">
         <button class="icon-btn heart" onclick="handleReaction(this, 'heart')">
@@ -101,8 +121,9 @@
 
 <div id="load-more">滑動載入更多...</div>
 
-<div id="comment-backdrop" onclick="closeComment()"></div>
-<div id="comment-sheet">
+<!-- Threads 留言面板 -->
+<div id="comment-backdrop" class="backdrop" onclick="closeComment()"></div>
+<div id="comment-sheet" class="bottom-sheet">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <span>回覆</span>
@@ -112,14 +133,45 @@
     <div class="no-comments">尚未有任何回覆，成為第一個留言的人吧！</div>
   </div>
   <div class="sheet-footer">
-    <input type="text" id="comment-input" class="comment-input" placeholder="撰寫回覆..." oninput="checkInput()">
-    <button id="post-btn" class="post-btn" onclick="submitComment()" disabled>發佈</button>
+    <input type="text" id="comment-input" class="comment-input" placeholder="撰寫回覆..." oninput="checkCommentInput()">
+    <button id="post-btn" class="action-btn" onclick="submitComment()" disabled>發佈</button>
   </div>
+</div>
+
+<!-- Threads 新增貼文面板 -->
+<div id="post-backdrop" class="backdrop" onclick="closePostSheet()"></div>
+<div id="post-sheet" class="bottom-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span>新貼文</span>
+    <span onclick="closePostSheet()" style="cursor:pointer; font-weight: normal; color: #666;">取消</span>
+  </div>
+  <div class="sheet-header-placeholder" style="padding: 10px 20px; font-size: 13px; color:#8e8e93;">分享你的新鮮事...</div>
+  <div class="sheet-body" style="padding-top: 5px;">
+    <textarea id="post-input" class="post-textarea" placeholder="在這裡輸入內容..." oninput="checkPostInput()"></textarea>
+  </div>
+  <div class="sheet-footer" style="justify-content: flex-end;">
+    <button id="submit-post-btn" class="action-btn" onclick="submitPost()" disabled>發布</button>
+  </div>
+</div>
+
+<!-- 仿 Threads 底部置頂導覽列 -->
+<div class="bottom-nav">
+  <button class="nav-btn" onclick="openPostSheet()">
+    <svg class="nav-icon" viewBox="0 0 24 24">
+      <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
 </div>
 
 <script>
   let currentActivePost = null;
   const commentStore = {}; // 模擬後端儲存每則貼文的留言清單
+  
+  // 用於唯一辨識貼文的 ID（改用時間戳記戳，避免與滾動載入的序號衝突）
+  function generateUniqueId() {
+    return 'post-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+  }
 
   // 1. 讚/倒讚 邏輯
   function handleReaction(clickedBtn, type) {
@@ -150,22 +202,22 @@
     currentActivePost = btn.closest('.post-card');
     const postId = currentActivePost.getAttribute('data-post-id');
     
-    // 渲染該貼文的留言
     renderComments(postId);
 
-    document.getElementById('main-body').classList.add('sheet-open');
+    document.getElementById('main-body').classList.add('sheet-open-comment');
     document.body.style.overflow = 'hidden';
     document.getElementById('comment-input').focus();
   }
 
   function closeComment() {
-    document.getElementById('main-body').classList.remove('sheet-open');
+    document.getElementById('main-body').classList.remove('sheet-open-comment');
     document.body.style.overflow = 'auto';
     document.getElementById('comment-input').value = '';
+    checkCommentInput();
   }
 
   // 3. 發佈留言邏輯
-  function checkInput() {
+  function checkCommentInput() {
     const input = document.getElementById('comment-input');
     const btn = document.getElementById('post-btn');
     if (input.value.trim().length > 0) {
@@ -184,20 +236,16 @@
 
     if (!text) return;
 
-    // 儲存留言到資料結構
     if (!commentStore[postId]) commentStore[postId] = [];
     commentStore[postId].push(text);
 
-    // 更新介面留言清單
     renderComments(postId);
 
-    // 更新貼文下方的計數器
     const countEl = currentActivePost.querySelector('.comment-count');
     countEl.innerText = commentStore[postId].length;
 
-    // 清空輸入框
     input.value = '';
-    checkInput();
+    checkCommentInput();
   }
 
   function renderComments(postId) {
@@ -211,18 +259,106 @@
     }
   }
 
-  // 4. 無限滑動：模擬新貼文載入
-  let nextId = 2;
+  // 4. 發布新貼文邏輯 (Threads 功能)
+  function openPostSheet() {
+    document.getElementById('main-body').classList.add('sheet-open-post');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('post-input').focus();
+  }
+
+  function closePostSheet() {
+    document.getElementById('main-body').classList.remove('sheet-open-post');
+    document.body.style.overflow = 'auto';
+    document.getElementById('post-input').value = '';
+    checkPostInput();
+  }
+
+  function checkPostInput() {
+    const input = document.getElementById('post-input');
+    const btn = document.getElementById('submit-post-btn');
+    if (input.value.trim().length > 0) {
+      btn.disabled = false;
+      btn.classList.add('active');
+    } else {
+      btn.disabled = true;
+      btn.classList.remove('active');
+    }
+  }
+
+  function submitPost() {
+    const input = document.getElementById('post-input');
+    const content = input.value.trim();
+    if (!content) return;
+
+    const id = generateUniqueId();
+    const feed = document.getElementById('feed');
+    
+    // 產生隨機柔和色系背景
+    const randomHue = Math.floor(Math.random() * 360);
+    const randomBg = `hsl(${randomHue}, 45%, 95%)`;
+
+    // 建立新貼文元件
+    const newPost = document.createElement('div');
+    newPost.className = 'post-card';
+    newPost.setAttribute('data-post-id', id);
+    newPost.innerHTML = `
+      <div class="post-image" style="background-color: ${randomBg}">
+        ${escapeHtml(content)}
+      </div>
+      <div class="interaction-group">
+        <div class="btn-wrapper">
+          <button class="icon-btn heart" onclick="handleReaction(this, 'heart')">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          </button>
+          <span class="label heart-count">0</span>
+        </div>
+        <div class="btn-wrapper">
+          <button class="icon-btn" onclick="openComment(this)">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg>
+          </button>
+          <span class="label comment-count">0</span>
+        </div>
+        <div class="btn-wrapper">
+          <button class="icon-btn dislike" onclick="handleReaction(this, 'dislike')">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>
+          </button>
+          <span class="label">不喜歡</span>
+        </div>
+      </div>`;
+    
+    // 把新貼文插入到 Feed 的最頂端
+    feed.insertBefore(newPost, feed.firstChild);
+
+    // 關閉輸入面板
+    closePostSheet();
+    
+    // 讓畫面平滑滾動回頂端
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // 安全防護
+  function escapeHtml(text) {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // 5. 無限滑動：模擬隨機顏色生活卡片載入 (移除文字編號)
+  let scrollColorIndex = 0;
   const observer = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting) {
       const feed = document.getElementById('feed');
       for (let i = 0; i < 2; i++) {
-        const id = nextId++;
+        scrollColorIndex++;
+        const id = generateUniqueId();
         const post = document.createElement('div');
         post.className = 'post-card';
         post.setAttribute('data-post-id', id);
         post.innerHTML = `
-          <div class="post-image" style="background-color:hsl(${id * 40}, 30%, 90%)">貼文 #${id}</div>
+          <div class="post-image" style="background-color:hsl(${scrollColorIndex * 65}, 25%, 88%)"></div>
           <div class="interaction-group">
             <div class="btn-wrapper">
               <button class="icon-btn heart" onclick="handleReaction(this, 'heart')"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
