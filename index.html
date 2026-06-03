@@ -38,6 +38,368 @@
   .dislike.active .icon-svg { fill: #000; stroke: #000; }
   .label { font-size: 12px; color: #606060; font-weight: 500; }
 
+  .post-card.disabled-card .icon-btn { cursor: not-allowed; opacity: 0.3; }
+  .post-card.disabled-card .icon-btn:active { transform: none; }
+  .post-card.disabled-card .label { opacity: 0.3; }
+
+  .backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 100; }
+  .bottom-sheet {
+    position: fixed; bottom: -100%; left: 0; width: 100%; height: 75vh;
+    background: white; border-top-left-radius: 20px; border-top-right-radius: 20px;
+    z-index: 101; transition: bottom 0.3s ease-out; display: flex; flex-direction: column;
+  }
+  .sheet-handle { width: 40px; height: 5px; background: #e0e0e0; border-radius: 10px; margin: 10px auto; }
+  .sheet-header { padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; font-weight: bold; }
+  .sheet-body { flex: 1; overflow-y: auto; padding: 15px; }
+  .comment-item { padding: 10px; border-bottom: 1px solid #f9f9f9; font-size: 14px; line-height: 1.4; color: #333; animation: fadeIn 0.3s; }
+  .no-comments { color: #aaa; text-align: center; margin-top: 50px; }
+  .sheet-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; align-items: center; gap: 10px; background: white; }
+  .comment-input, .post-textarea { flex: 1; background: #f0f0f0; border: none; padding: 12px 15px; border-radius: 20px; outline: none; font-size: 14px; }
+  .post-textarea { border-radius: 12px; height: 150px; resize: none; font-family: inherit; line-height: 1.5; }
+  .action-btn { color: #0095f6; border:none; background:none; font-weight:bold; cursor:pointer; opacity: 0.5; font-size: 14px; }
+  .action-btn.active { opacity: 1; }
+  .sheet-open-comment #comment-sheet, .sheet-open-post #post-sheet { bottom: 0; }
+  .sheet-open-comment #comment-backdrop, .sheet-open-post #post-backdrop { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  
+  #load-more { padding: 30px; color: #888; font-size: 14px; display: none; }
+  
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; width: 100%; background: white;
+    box-shadow: 0 -1px 5px rgba(0,0,0,0.05); display: flex; justify-content: center;
+    align-items: center; padding: 10px 0; z-index: 90;
+  }
+  .nav-btn { background: none; border: none; cursor: pointer; padding: 10px 20px; display: flex; align-items: center; justify-content: center; }
+  .nav-icon { width: 28px; height: 28px; fill: none; stroke: #111; stroke-width: 2; }
+  
+  .empty-tips { color: #999; margin-top: 100px; text-align: center; font-size: 15px; line-height: 1.6; }
+</style>
+</head>
+<body id="main-body">
+
+<div class="header">676767</div>
+<div id="feed"></div>
+<div id="load-more">滑動載入更多...</div>
+
+<div id="comment-backdrop" class="backdrop" onclick="closeComment()"></div>
+<div id="comment-sheet" class="bottom-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span>回覆</span>
+    <span onclick="closeComment()" style="cursor:pointer; font-weight: normal; color: #666;">取消</span>
+  </div>
+  <div id="comment-list" class="sheet-body">
+    <div class="no-comments">尚未有任何回覆，成為第一個留言的人吧！</div>
+  </div>
+  <div class="sheet-footer">
+    <input type="text" id="comment-input" class="comment-input" placeholder="撰寫回覆..." oninput="checkCommentInput()">
+    <button id="post-btn" class="action-btn" onclick="submitComment()" disabled>發佈</button>
+  </div>
+</div>
+
+<div id="post-backdrop" class="backdrop" onclick="closePostSheet()"></div>
+<div id="post-sheet" class="bottom-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span>新貼文</span>
+    <span onclick="closePostSheet()" style="cursor:pointer; font-weight: normal; color: #666;">取消</span>
+  </div>
+  <div class="sheet-header-placeholder" style="padding: 10px 20px; font-size: 13px; color:#8e8e93;">分享你的新鮮事...</div>
+  <div class="sheet-body" style="padding-top: 5px;">
+    <textarea id="post-input" class="post-textarea" placeholder="在這裡輸入內容..." oninput="checkPostInput()"></textarea>
+  </div>
+  <div class="sheet-footer" style="justify-content: flex-end;">
+    <button id="submit-post-btn" class="action-btn" onclick="submitPost()" disabled>發布</button>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <button class="nav-btn" onclick="openPostSheet()">
+    <svg class="nav-icon" viewBox="0 0 24 24">
+      <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+  let currentActivePost = null;
+  let scrollColorIndex = 0; 
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB2zpNXXabpJqOeZxL4KB1chQjAB2LT_0I",
+    authDomain: "project-2481638426562755907.firebaseapp.com",
+    databaseURL: "https://project-2481638426562755907-default-rtdb.firebaseio.com/", 
+    projectId: "project-2481638426562755907",
+    storageBucket: "project-2481638426562755907.firebasestorage.app",
+    messagingSenderId: "50961584141",
+    appId: "1:50961584141:web:f5ca6704f12ad2a90d8544"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+
+  let customPosts = [];
+  let commentStore = {};
+  let localReactions = JSON.parse(localStorage.getItem('threads_local_reactions')) || {};
+
+  function saveLocalReactions() {
+    localStorage.setItem('threads_local_reactions', JSON.stringify(localReactions));
+  }
+
+  function generateUniqueId() {
+    return 'post-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+  }
+
+  // 🛡️ 雙重保險過濾器：徹底封鎖髒資料
+  database.ref('posts').on('value', (snapshot) => {
+    const data = snapshot.val();
+    const feed = document.getElementById('feed');
+    const loadMoreEl = document.getElementById('load-more');
+    feed.innerHTML = '';
+    
+    if (data && typeof data === 'object') {
+      customPosts = Object.values(data).filter(p => {
+        // 條件：必須是物件、有id、有內容、且內容不能是空白、不能包含錯誤訊息或物件字串
+        return p && 
+               p.id && 
+               p.content && 
+               p.content.trim() !== '' && 
+               !p.content.includes('[object Object]') &&
+               !p.content.includes('Error') &&
+               !p.id.startsWith('temp-'); // 排除暫時預載卡片
+      }).reverse();
+    } else {
+      customPosts = [];
+    }
+
+    if (customPosts.length > 0) {
+      loadMoreEl.style.display = 'block';
+      customPosts.forEach(p => {
+        const postCard = createPostDOM(p, false); 
+        feed.appendChild(postCard);
+      });
+    } else {
+      loadMoreEl.style.display = 'none';
+      feed.innerHTML = '<div class="empty-tips">目前沒有任何貼文<br>點擊下方按鈕，寫下第一篇新鮮事吧！</div>';
+    }
+  });
+
+  database.ref('comments').on('value', (snapshot) => {
+    const data = snapshot.val();
+    commentStore = (data && typeof data === 'object') ? data : {};
+    
+    customPosts.forEach(p => {
+      const card = document.querySelector(`[data-post-id="${p.id}"]`);
+      if (card) {
+        const cCount = commentStore[p.id] ? Object.keys(commentStore[p.id]).length : 0;
+        card.querySelector('.comment-count').innerText = cCount;
+      }
+    });
+  });
+
+  function createPostDOM(postObj, isDummy = false) {
+    const post = document.createElement('div');
+    post.className = isDummy ? 'post-card disabled-card' : 'post-card';
+    post.setAttribute('data-post-id', postObj.id);
+    if (isDummy) {
+      post.setAttribute('data-dummy', 'true');
+    }
+    
+    const cCount = commentStore[postObj.id] ? Object.keys(commentStore[postObj.id]).length : 0;
+    const status = localReactions[postObj.id] || { isHeartActive: false, isDislikeActive: false };
+    const heartClass = status.isHeartActive ? 'heart active' : 'heart';
+    const dislikeClass = status.isDislikeActive ? 'dislike active' : 'dislike';
+
+    post.innerHTML = `
+      <div class="post-image" style="background-color: ${postObj.bgColor || '#e9ecef'}">
+        ${postObj.content ? escapeHtml(postObj.content) : ''}
+      </div>
+      <div class="interaction-group">
+        <div class="btn-wrapper">
+          <button class="icon-btn ${heartClass}" onclick="handleReaction(this, 'heart')">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          </button>
+          <span class="label heart-count">${postObj.likes || 0}</span>
+        </div>
+        <div class="btn-wrapper">
+          <button class="icon-btn" onclick="openComment(this)">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg>
+          </button>
+          <span class="label comment-count">${cCount}</span>
+        </div>
+        <div class="btn-wrapper">
+          <button class="icon-btn ${dislikeClass}" onclick="handleReaction(this, 'dislike')">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>
+          </button>
+          <span class="label">不喜歡</span>
+        </div>
+      </div>`;
+    return post;
+  }
+
+  function handleReaction(clickedBtn, type) {
+    const card = clickedBtn.closest('.post-card');
+    if (card.getAttribute('data-dummy') === 'true') return;
+
+    const postId = card.getAttribute('data-post-id');
+    const postData = customPosts.find(p => p.id === postId);
+    if (!postData) return;
+
+    let currentLikes = postData.likes || 0;
+    if (!localReactions[postId]) {
+      localReactions[postId] = { isHeartActive: false, isDislikeActive: false };
+    }
+    const myStatus = localReactions[postId];
+
+    if (type === 'heart') {
+      if (myStatus.isHeartActive) {
+        currentLikes = Math.max(0, currentLikes - 1);
+        myStatus.isHeartActive = false;
+      } else {
+        currentLikes += 1;
+        myStatus.isHeartActive = true;
+        myStatus.isDislikeActive = false;
+      }
+    } else if (type === 'dislike') {
+      if (myStatus.isDislikeActive) {
+        myStatus.isDislikeActive = false;
+      } else {
+        myStatus.isDislikeActive = true;
+        if (myStatus.isHeartActive) {
+          currentLikes = Math.max(0, currentLikes - 1);
+          myStatus.isHeartActive = false;
+        }
+      }
+    }
+
+    saveLocalReactions();
+    database.ref('posts/' + postId).update({ likes: currentLikes });
+  }
+
+  function openComment(btn) {
+    currentActivePost = btn.closest('.post-card');
+    if (currentActivePost.getAttribute('data-dummy') === 'true') return;
+
+    const postId = currentActivePost.getAttribute('data-post-id');
+    renderComments(postId);
+    document.getElementById('main-body').classList.add('sheet-open-comment');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('comment-input').focus();
+  }
+
+  function closeComment() {
+    document.getElementById('main-body').classList.remove('sheet-open-comment');
+    document.body.style.overflow = 'auto';
+    document.getElementById('comment-input').value = '';
+    checkCommentInput();
+  }
+
+  function checkCommentInput() {
+    const input = document.getElementById('comment-input');
+    const btn = document.getElementById('post-btn');
+    if (input.value.trim().length > 0) {
+      btn.disabled = false;
+      btn.classList.add('active');
+    } else {
+      btn.disabled = true;
+      btn.classList.remove('active');
+    }
+  }
+
+  function submitComment() {
+    const input = document.getElementById('comment-input');
+    const postId = currentActivePost.getAttribute('data-post-id');
+    const text = input.value.trim();
+    if (!text) return;
+
+    database.ref('comments/' + postId).push(text);
+    input.value = '';
+    checkCommentInput();
+    closeComment();
+  }
+
+  function renderComments(postId) {
+    const list = document.getElementById('comment-list');
+    const commentsObj = commentStore[postId] || {};
+    const comments = Object.values(commentsObj);
+    if (comments.length === 0) {
+      list.innerHTML = '<div class="no-comments">尚未有任何回覆，成為第一個留言的人吧！</div>';
+    } else {
+      list.innerHTML = comments.map(c => `<div class="comment-item">${escapeHtml(c)}</div>`).reverse().join('');
+    }
+  }
+
+  function openPostSheet() {
+    document.getElementById('main-body').classList.add('sheet-open-post');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('post-input').focus();
+  }
+
+  function closePostSheet() {
+    document.getElementById('main-body').classList.remove('sheet-open-post');
+    document.body.style.overflow = 'auto';
+    document.getElementById('post-input').value = '';
+    checkPostInput();
+  }
+
+  function checkPostInput() {
+    const input = document.getElementById('post-input');
+    const btn = document.getElementById('submit-post-btn');
+    if (input.value.trim().length > 0) {
+      btn.disabled = false;
+      btn.classList.add('active');
+    } else {
+      btn.disabled = true;
+      btn.classList.remove('active');
+    }
+  }
+
+  function submitPost() {
+    const input = document.getElementById('post-input');
+    const content = input.value.trim();
+    if (!content) return;
+
+    const id = generateUniqueId();
+    const randomHue = Math.floor(Math.random() * 360);
+    const randomBg = `hsl(${randomHue}, 45%, 95%)`;
+    const newPostData = { id: id, content: content, bgColor: randomBg, likes: 0 };
+
+    database.ref('posts/' + id).set(newPostData);
+    closePostSheet();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function escapeHtml(text) {
+    if (typeof text !== 'string') return '';
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && customPosts.length > 0) {
+      const feed = document.getElementById('feed');
+      for (let i = 0; i < 2; i++) {
+        scrollColorIndex++;
+        const tempId = 'temp-' + generateUniqueId();
+        const post = createPostDOM({
+          id: tempId,
+          content: '',
+          bgColor: `hsl(${scrollColorIndex * 65}, 25%, 88%)`,
+          likes: 0
+        }, true); 
+        feed.appendChild(post);
+      }
+    }
+  });
+  observer.observe(document.getElementById('load-more'));
+</script>
+</body>
+</html>  .heart.active .icon-svg { fill: #ff3040; stroke: #ff3040; }
+  .dislike.active .icon-svg { fill: #000; stroke: #000; }
+  .label { font-size: 12px; color: #606060; font-weight: 500; }
+
   /* 針對純前端模擬的空卡片進行 CSS 停用視覺效果 */
   .post-card.disabled-card .icon-btn { cursor: not-allowed; opacity: 0.3; }
   .post-card.disabled-card .icon-btn:active { transform: none; }
