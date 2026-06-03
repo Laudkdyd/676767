@@ -92,36 +92,10 @@
 
 <div class="header">676767</div>
 
-<!-- 動態流 -->
-<div id="feed">
-  <div class="post-card" data-post-id="initial-1">
-    <div class="post-image" style="background-color: #e3f2fd;"></div>
-    <div class="interaction-group">
-      <div class="btn-wrapper">
-        <button class="icon-btn heart" onclick="handleReaction(this, 'heart')">
-          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-        </button>
-        <span class="label heart-count">0</span>
-      </div>
-      <div class="btn-wrapper">
-        <button class="icon-btn" onclick="openComment(this)">
-          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg>
-        </button>
-        <span class="label comment-count">0</span>
-      </div>
-      <div class="btn-wrapper">
-        <button class="icon-btn dislike" onclick="handleReaction(this, 'dislike')">
-          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>
-        </button>
-        <span class="label">不喜歡</span>
-      </div>
-    </div>
-  </div>
-</div>
+<div id="feed"></div>
 
 <div id="load-more">滑動載入更多...</div>
 
-<!-- Threads 留言面板 -->
 <div id="comment-backdrop" class="backdrop" onclick="closeComment()"></div>
 <div id="comment-sheet" class="bottom-sheet">
   <div class="sheet-handle"></div>
@@ -138,7 +112,6 @@
   </div>
 </div>
 
-<!-- Threads 新增貼文面板 -->
 <div id="post-backdrop" class="backdrop" onclick="closePostSheet()"></div>
 <div id="post-sheet" class="bottom-sheet">
   <div class="sheet-handle"></div>
@@ -155,7 +128,6 @@
   </div>
 </div>
 
-<!-- 仿 Threads 底部置頂導覽列 -->
 <div class="bottom-nav">
   <button class="nav-btn" onclick="openPostSheet()">
     <svg class="nav-icon" viewBox="0 0 24 24">
@@ -166,44 +138,134 @@
 
 <script>
   let currentActivePost = null;
-  const commentStore = {}; // 模擬後端儲存每則貼文的留言清單
   
-  // 用於唯一辨識貼文的 ID（改用時間戳記戳，避免與滾動載入的序號衝突）
+  // 載入本地儲存庫
+  const commentStore = JSON.parse(localStorage.getItem('threads_comments')) || {}; 
+  let customPosts = JSON.parse(localStorage.getItem('threads_posts')) || [];
+
+  function saveToLocalStorage() {
+    localStorage.setItem('threads_comments', JSON.stringify(commentStore));
+    localStorage.setItem('threads_posts', JSON.stringify(customPosts));
+  }
+
   function generateUniqueId() {
     return 'post-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
   }
 
-  // 1. 讚/倒讚 邏輯
+  // 初始化載入貼文
+  function initFeed() {
+    const feed = document.getElementById('feed');
+    feed.innerHTML = '';
+
+    // 若無快取，初始化預設的第一則貼文
+    if (customPosts.length === 0) {
+      customPosts.push({
+        id: 'initial-1',
+        content: '',
+        bgColor: '#e3f2fd',
+        likes: 0,
+        isHeartActive: false,
+        isDislikeActive: false
+      });
+      saveToLocalStorage();
+    }
+
+    // 渲染所有儲存的貼文
+    customPosts.forEach(p => {
+      const postCard = createPostDOM(p);
+      feed.appendChild(postCard);
+    });
+  }
+
+  function createPostDOM(postObj) {
+    const post = document.createElement('div');
+    post.className = 'post-card';
+    post.setAttribute('data-post-id', postObj.id);
+    
+    const cCount = commentStore[postObj.id] ? commentStore[postObj.id].length : 0;
+
+    const heartClass = postObj.isHeartActive ? 'heart active' : 'heart';
+    const dislikeClass = postObj.isDislikeActive ? 'dislike active' : 'dislike';
+
+    post.innerHTML = `
+      <div class="post-image" style="background-color: ${postObj.bgColor}">
+        ${postObj.content ? escapeHtml(postObj.content) : ''}
+      </div>
+      <div class="interaction-group">
+        <div class="btn-wrapper">
+          <button class="icon-btn ${heartClass}" onclick="handleReaction(this, 'heart')">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          </button>
+          <span class="label heart-count">${postObj.likes || 0}</span>
+        </div>
+        <div class="btn-wrapper">
+          <button class="icon-btn" onclick="openComment(this)">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg>
+          </button>
+          <span class="label comment-count">${cCount}</span>
+        </div>
+        <div class="btn-wrapper">
+          <button class="icon-btn ${dislikeClass}" onclick="handleReaction(this, 'dislike')">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>
+          </button>
+          <span class="label">不喜歡</span>
+        </div>
+      </div>`;
+    return post;
+  }
+
+  // 重構後的精準 讚/倒讚 互斥與加減分運算
   function handleReaction(clickedBtn, type) {
     const card = clickedBtn.closest('.post-card');
+    const postId = card.getAttribute('data-post-id');
     const heartBtn = card.querySelector('.heart');
     const dislikeBtn = card.querySelector('.dislike');
     const countEl = card.querySelector('.heart-count');
-    const wasHeartActive = heartBtn.classList.contains('active');
-    const isAlreadyActive = clickedBtn.classList.contains('active');
+    
+    const postData = customPosts.find(p => p.id === postId);
+    if (!postData) return; // 無限滾動的臨時卡片不存檔
 
-    heartBtn.classList.remove('active');
-    dislikeBtn.classList.remove('active');
-
-    if (isAlreadyActive) {
-      if (type === 'heart') countEl.innerText = parseInt(countEl.innerText) - 1;
-    } else {
-      clickedBtn.classList.add('active');
-      if (type === 'heart') {
-        countEl.innerText = parseInt(countEl.innerText) + 1;
-      } else if (wasHeartActive) {
-        countEl.innerText = parseInt(countEl.innerText) - 1;
+    if (type === 'heart') {
+      if (postData.isHeartActive) {
+        // 取消愛心
+        postData.likes = Math.max(0, postData.likes - 1);
+        postData.isHeartActive = false;
+      } else {
+        // 點亮愛心
+        postData.likes += 1;
+        postData.isHeartActive = true;
+        // 如果原本有點不喜歡，將其取消
+        postData.isDislikeActive = false;
+      }
+    } else if (type === 'dislike') {
+      if (postData.isDislikeActive) {
+        // 取消不喜歡
+        postData.isDislikeActive = false;
+      } else {
+        // 點亮不喜歡
+        postData.isDislikeActive = true;
+        // 如果本來有愛心，必須扣掉讚數並取消愛心
+        if (postData.isHeartActive) {
+          postData.likes = Math.max(0, postData.likes - 1);
+          postData.isHeartActive = false;
+        }
       }
     }
+
+    // 同步 UI 畫面
+    heartBtn.classList.toggle('active', postData.isHeartActive);
+    dislikeBtn.classList.toggle('active', postData.isDislikeActive);
+    countEl.innerText = postData.likes;
+
+    // 寫入永久儲存
+    saveToLocalStorage();
   }
 
   // 2. 留言板控制
   function openComment(btn) {
     currentActivePost = btn.closest('.post-card');
     const postId = currentActivePost.getAttribute('data-post-id');
-    
     renderComments(postId);
-
     document.getElementById('main-body').classList.add('sheet-open-comment');
     document.body.style.overflow = 'hidden';
     document.getElementById('comment-input').focus();
@@ -239,6 +301,7 @@
     if (!commentStore[postId]) commentStore[postId] = [];
     commentStore[postId].push(text);
 
+    saveToLocalStorage();
     renderComments(postId);
 
     const countEl = currentActivePost.querySelector('.comment-count');
@@ -251,15 +314,14 @@
   function renderComments(postId) {
     const list = document.getElementById('comment-list');
     const comments = commentStore[postId] || [];
-    
     if (comments.length === 0) {
       list.innerHTML = '<div class="no-comments">尚未有任何回覆，成為第一個留言的人吧！</div>';
     } else {
-      list.innerHTML = comments.map(c => `<div class="comment-item">${c}</div>`).reverse().join('');
+      list.innerHTML = comments.map(c => `<div class="comment-item">${escapeHtml(c)}</div>`).reverse().join('');
     }
   }
 
-  // 4. 發布新貼文邏輯 (Threads 功能)
+  // 4. 發布新貼文邏輯
   function openPostSheet() {
     document.getElementById('main-body').classList.add('sheet-open-post');
     document.body.style.overflow = 'hidden';
@@ -293,50 +355,28 @@
     const id = generateUniqueId();
     const feed = document.getElementById('feed');
     
-    // 產生隨機柔和色系背景
     const randomHue = Math.floor(Math.random() * 360);
     const randomBg = `hsl(${randomHue}, 45%, 95%)`;
 
-    // 建立新貼文元件
-    const newPost = document.createElement('div');
-    newPost.className = 'post-card';
-    newPost.setAttribute('data-post-id', id);
-    newPost.innerHTML = `
-      <div class="post-image" style="background-color: ${randomBg}">
-        ${escapeHtml(content)}
-      </div>
-      <div class="interaction-group">
-        <div class="btn-wrapper">
-          <button class="icon-btn heart" onclick="handleReaction(this, 'heart')">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-          </button>
-          <span class="label heart-count">0</span>
-        </div>
-        <div class="btn-wrapper">
-          <button class="icon-btn" onclick="openComment(this)">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg>
-          </button>
-          <span class="label comment-count">0</span>
-        </div>
-        <div class="btn-wrapper">
-          <button class="icon-btn dislike" onclick="handleReaction(this, 'dislike')">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>
-          </button>
-          <span class="label">不喜歡</span>
-        </div>
-      </div>`;
-    
-    // 把新貼文插入到 Feed 的最頂端
+    const newPostData = {
+      id: id,
+      content: content,
+      bgColor: randomBg,
+      likes: 0,
+      isHeartActive: false,
+      isDislikeActive: false
+    };
+
+    customPosts.unshift(newPostData);
+    saveToLocalStorage();
+
+    const newPost = createPostDOM(newPostData);
     feed.insertBefore(newPost, feed.firstChild);
 
-    // 關閉輸入面板
     closePostSheet();
-    
-    // 讓畫面平滑滾動回頂端
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // 安全防護
   function escapeHtml(text) {
     return text
       .replace(/&/g, "&amp;")
@@ -346,39 +386,30 @@
       .replace(/'/g, "&#039;");
   }
 
-  // 5. 無限滑動：模擬隨機顏色生活卡片載入 (移除文字編號)
+  // 5. 無限滑動
   let scrollColorIndex = 0;
   const observer = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting) {
       const feed = document.getElementById('feed');
       for (let i = 0; i < 2; i++) {
         scrollColorIndex++;
-        const id = generateUniqueId();
-        const post = document.createElement('div');
-        post.className = 'post-card';
-        post.setAttribute('data-post-id', id);
-        post.innerHTML = `
-          <div class="post-image" style="background-color:hsl(${scrollColorIndex * 65}, 25%, 88%)"></div>
-          <div class="interaction-group">
-            <div class="btn-wrapper">
-              <button class="icon-btn heart" onclick="handleReaction(this, 'heart')"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
-              <span class="label heart-count">0</span>
-            </div>
-            <div class="btn-wrapper">
-              <button class="icon-btn" onclick="openComment(this)"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg></button>
-              <span class="label comment-count">0</span>
-            </div>
-            <div class="btn-wrapper">
-              <button class="icon-btn dislike" onclick="handleReaction(this, 'dislike')"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg></button>
-              <span class="label">不喜歡</span>
-            </div>
-          </div>`;
+        const tempId = generateUniqueId();
+        const post = createPostDOM({
+          id: tempId,
+          content: '',
+          bgColor: `hsl(${scrollColorIndex * 65}, 25%, 88%)`,
+          likes: 0,
+          isHeartActive: false,
+          isDislikeActive: false
+        });
         feed.appendChild(post);
       }
     }
   });
   observer.observe(document.getElementById('load-more'));
 
+  // 啟動載入
+  initFeed();
 </script>
 </body>
 </html>
