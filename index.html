@@ -27,34 +27,55 @@
       min-height: 150px; 
       height: auto; 
       background-color: #e9ecef; 
-      
-      /* 修正：改回 block 排版，讓文字能正常換行，不再橫向硬擠成一直行 */
       display: block; 
-      
       color: #212529; 
       font-size: 20px; 
       font-weight: 500; 
-      
-      /* 調整：透過適當的上下左右內距，讓字卡在字多時也能保持舒適的留白空間 */
       padding: 50px 30px; 
       box-sizing: border-box; 
       text-align: center;
       line-height: 1.6; 
-      
-      /* 調整：強固斷行機制，避免長英文或特殊網址衝出框架外 */
       word-wrap: break-word;
       overflow-wrap: break-word;
       word-break: break-word;
     }
-    .interaction-group { display: flex; gap: 30px; padding: 10px 15px; }
-    .btn-wrapper { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 60px; }
-    .icon-btn { background: none; border: none; cursor: pointer; padding: 8px; transition: 0.2s; }
+    
+    /* 調整：縮小按鈕整體的左右間距與上下內距 */
+    .interaction-group { 
+      display: flex; 
+      gap: 20px; 
+      padding: 8px 15px; 
+    }
+    /* 調整：縮小包裝按鈕的寬度 */
+    .btn-wrapper { 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      gap: 2px; 
+      width: 50px; 
+    }
+    /* 調整：內縮按鈕的 padding，減少無用空間 */
+    .icon-btn { 
+      background: none; 
+      border: none; 
+      cursor: pointer; 
+      padding: 6px; 
+      transition: 0.2s; 
+    }
     .icon-btn:active { transform: scale(0.9); }
-    .icon-svg { fill: white; stroke: black; stroke-width: 2; width: 28px; height: 28px; }
+    /* 調整：將 SVG 圖示大小從 28px 縮小至 22px */
+    .icon-svg { 
+      fill: white; 
+      stroke: black; 
+      stroke-width: 2; 
+      width: 22px; 
+      height: 22px; 
+    }
     
     .heart.active .icon-svg { fill: #ff3040; stroke: #ff3040; }
     .dislike.active .icon-svg { fill: #000; stroke: #000; }
-    .label { font-size: 12px; color: #606060; font-weight: 500; }
+    /* 調整：數字與文字標籤縮小至 11px */
+    .label { font-size: 11px; color: #606060; font-weight: 500; }
 
     .post-card.disabled-card .icon-btn { cursor: not-allowed; opacity: 0.3; }
     .post-card.disabled-card .icon-btn:active { transform: none; }
