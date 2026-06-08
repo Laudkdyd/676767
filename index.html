@@ -240,8 +240,8 @@
 <script>
   let currentActivePost = null;
   let isOnline = false; 
-  let selectedImageSource = ""; // 存放圖片網址或 Blob URL
-  let mySubmittedPostIds = new Set(); // 記錄本機發布的 ID，防 Realtime 重複渲染
+  let selectedImageSource = ""; 
+  let mySubmittedPostIds = new Set(); 
   
   const SUPABASE_URL = "https://diquelyhlucvufoqpxkh.supabase.co"; 
   const SUPABASE_ANON_KEY = "sb_publishable_GJvHju2fS7NO598COPpJyg_8zHxbTU5";
@@ -281,7 +281,6 @@
     setTimeout(() => { fileInput.click(); }, 60);
   }
 
-  // 1. 剪貼簿貼上優化：改用極速不占記憶體的 Blob URL
   function handleImagePaste(e) {
     const items = (e.clipboardData || window.clipboardData).items;
     for (let i = 0; i < items.length; i++) {
@@ -311,7 +310,6 @@
     }
   }
 
-  // 2. 相簿選取優化：改用 Blob URL
   function previewPostImage(input) {
     const file = input.files[0];
     if (!file) return;
@@ -356,11 +354,10 @@
         await fetchPosts();
         await fetchAllComments();
 
-        // 即時更新
         supabaseClient.channel('any-channel-name')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
             const newPost = payload.new;
-            if (mySubmittedPostIds.has(newPost.id)) return; // 避免自發貼文重複渲染
+            if (mySubmittedPostIds.has(newPost.id)) return;
 
             const exists = customPosts.some(p => p.id === newPost.id);
             if (!exists) {
@@ -444,7 +441,6 @@
     }
   }
 
-  // 3. DOM 渲染優化：加入 loading="lazy" 防止大量圖片滑動時掉幀
   function createPostDOM(postObj) {
     const post = document.createElement('div');
     post.className = 'post-card';
@@ -646,7 +642,7 @@
     }
   }
 
-  // 4. 重要優化：串接 Supabase Storage 儲存桶，將圖片上傳至雲端產生永久公開網址
+  // 強化整合與即時報錯功能
   async function submitPost() {
     const input = document.getElementById('post-input');
     const content = input.value.trim();
@@ -659,49 +655,47 @@
 
     let finalBgOrImg = "";
 
-    // 檢查是否有選取實體圖片檔案
     if (fileInput && fileInput.files && fileInput.files[0]) {
       const file = fileInput.files[0];
       
       if (isOnline) {
-        // 產生不重複隨機檔名
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
         
-        // A. 上傳圖片到 Supabase Storage 的 post-images 儲存桶
+        console.log("正在嘗試上傳圖片:", fileName);
+        
+        // A. 上傳圖片到 Supabase Storage
         const { data: uploadData, error: uploadError } = await supabaseClient
           .storage
           .from('post-images')
           .upload(fileName, file);
 
         if (uploadError) {
-          console.error("圖片上傳失敗:", uploadError);
-          alert("圖片上傳失敗，請重試");
+          console.error("【除錯提示】圖片上傳失敗:", uploadError);
+          alert(`圖片上傳失敗！\n請檢查是否建立名稱為 post-images 的 Storage Bucket 且開啟 Public 權限。\n錯誤內容：${uploadError.message}`);
           return;
         }
 
-        // B. 取得上傳後的公開圖片 URL 網址
+        // B. 取得上傳後的公開圖片網址
         const { data: publicUrlData } = supabaseClient
           .storage
           .from('post-images')
           .getPublicUrl(fileName);
           
         finalBgOrImg = publicUrlData.publicUrl;
+        console.log("【除錯提示】成功生成雲端網址:", finalBgOrImg);
       } else {
         finalBgOrImg = selectedImageSource;
       }
     } else if (selectedImageSource.startsWith('http')) {
-      // 支援複製貼上的外部網址
       finalBgOrImg = selectedImageSource;
     } else {
-      // 無圖片則隨機給色塊背景
       const randomHue = Math.floor(Math.random() * 360);
       finalBgOrImg = `hsl(${randomHue}, 45%, 95%)`;
     }
 
     const newPostData = { id: id, content: content, bgColor: finalBgOrImg, likes: 0, dislikes: 0 };
 
-    // 先在本機網頁畫面上呈現
     customPosts.unshift(newPostData);
     saveToLocalBackup();
     
@@ -714,12 +708,15 @@
     closePostSheet();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // C. 將完整、帶有正式圖片網址的資料新增至資料庫
     if (isOnline) {
       try {
-        await supabaseClient.from('posts').insert([newPostData]);
+        const { error: insertError } = await supabaseClient.from('posts').insert([newPostData]);
+        if (insertError) {
+          console.error("【除錯提示】資料庫寫入失敗:", insertError);
+          alert(`貼文文字儲存失敗！\n請檢查資料表 posts 的 bgColor 欄位型態是否已設為 text。\n錯誤內容：${insertError.message}`);
+        }
       } catch (e) {
-        console.error("Supabase 寫入失敗:", e);
+        console.error("Supabase 系統發生異常:", e);
       }
     }
 
