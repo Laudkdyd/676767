@@ -82,25 +82,30 @@
     }
 
     /* =================================================== */
-    /* RWD 手機版自動優化：當螢幕寬度小於 600px 時自動放大 */
+    /* RWD 手機版自動優化 */
     /* =================================================== */
     @media (max-width: 600px) {
       .interaction-group {
-        gap: 25px !important;       /* 拉開按鈕間距防誤觸 */
+        gap: 25px !important;       
         padding: 10px 15px !important;
       }
       .btn-wrapper {
         width: 55px !important;
       }
       .icon-btn {
-        padding: 6px !important;     /* 放大手機上的點擊感應範圍 */
+        padding: 6px !important;     
       }
       .icon-svg {
-        width: 24px !important;      /* 手機上圖示放大到 24px，方便點擊 */
+        width: 24px !important;      
         height: 24px !important;
       }
       .label {
-        font-size: 12px !important;  /* 手機上文字放大到 12px 方便閱讀 */
+        font-size: 12px !important;  
+      }
+      
+      /* 關鍵修正：強制把手機版的留言輸入框與發文框字體設定為 16px，防止手機畫面點擊時自動放大 */
+      .comment-input, .post-textarea {
+        font-size: 16px !important;
       }
     }
     /* =================================================== */
@@ -121,8 +126,11 @@
     .comment-item { padding: 10px; border-bottom: 1px solid #f9f9f9; font-size: 20px; line-height: 1.4; color: #333; animation: fadeIn 0.3s; }
     .no-comments { color: #aaa; text-align: center; margin-top: 50px; }
     .sheet-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; align-items: center; gap: 10px; background: white; }
+    
+    /* 這裡原本的 font-size 是 14px，會導致手機自動放大，上面已在 @media 幫你處理 */
     .comment-input, .post-textarea { flex: 1; background: #f0f0f0; border: none; padding: 12px 15px; border-radius: 20px; outline: none; font-size: 14px; }
     .post-textarea { border-radius: 12px; height: 150px; resize: none; font-family: inherit; line-height: 1.5; }
+    
     .action-btn { color: #0095f6; border:none; background:none; font-weight:bold; cursor:pointer; opacity: 0.5; font-size: 14px; }
     .action-btn.active { opacity: 1; }
     
