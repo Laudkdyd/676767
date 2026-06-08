@@ -255,6 +255,23 @@
       previewPostImage(this);
     };
 
+    // 防卡死機制：追蹤視窗焦點
+    let hasFocusLeft = false;
+    window.addEventListener('blur', () => {
+      hasFocusLeft = true;
+    }, { once: true });
+
+    setTimeout(() => {
+      // 如果 400 毫秒內視窗未曾離開過（表示點擊取消後被系統阻斷、相簿死鎖）
+      if (!hasFocusLeft && (!fileInput.files || fileInput.files.length === 0)) {
+        const currentText = document.getElementById('post-input').value;
+        if (currentText.trim().length > 0) {
+          sessionStorage.setItem('kfsh_pending_text', currentText);
+        }
+        window.location.reload(); // 自動重整網頁解開死結
+      }
+    }, 400);
+
     setTimeout(() => {
       fileInput.click();
     }, 60);
@@ -291,6 +308,14 @@
   }
 
   async function init() {
+    // 還原被卡死重整而留下的文字
+    const pendingText = sessionStorage.getItem('kfsh_pending_text');
+    if (pendingText) {
+      sessionStorage.removeItem('kfsh_pending_text');
+      document.getElementById('post-input').value = pendingText;
+      setTimeout(() => { openPostSheet(); }, 500);
+    }
+
     if (supabaseClient) {
       const { data, error } = await supabaseClient.from('posts').select('*').limit(1);
       if (error) {
