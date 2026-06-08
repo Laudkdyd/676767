@@ -83,7 +83,7 @@
       position: fixed; bottom: 0; left: 50%; width: 100%; max-width: 620px; height: 75dvh; max-height: 75%;
       background: white; border-top-left-radius: 20px; border-top-right-radius: 20px;
       z-index: 101; transform: translate(-50%, 100%); transition: transform 0.3s ease-out; display: flex; flex-direction: column;
-      will-change: transform; /* 硬體加速 */
+      will-change: transform;
     }
     .sheet-handle { width: 40px; height: 5px; background: #e0e0e0; border-radius: 10px; margin: 10px auto; flex-shrink: 0; }
     .sheet-header { padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; font-weight: bold; flex-shrink: 0; }
@@ -269,38 +269,27 @@
 
   function openPhotoGallery(e) {
     if(e) e.preventDefault();
-    
-    if (document.activeElement) {
-      document.activeElement.blur();
-    }
+    if (document.activeElement) document.activeElement.blur();
     document.getElementById('post-input').blur();
 
     const wrapper = document.getElementById('input-box-wrapper');
     wrapper.innerHTML = `<input type="file" id="post-file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">`;
     
     const fileInput = document.getElementById('post-file');
-    fileInput.onchange = function() {
-      previewPostImage(this);
-    };
+    fileInput.onchange = function() { previewPostImage(this); };
 
-    setTimeout(() => {
-      fileInput.click();
-    }, 60);
+    setTimeout(() => { fileInput.click(); }, 60);
   }
 
-  // 1. 【優化點】剪貼簿貼上優化：小圖用 Blob 加速，避免大圖卡死
+  // 1. 剪貼簿貼上優化：改用極速不占記憶體的 Blob URL
   function handleImagePaste(e) {
     const items = (e.clipboardData || window.clipboardData).items;
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf("image") !== -1) {
         const blob = items[i].getAsFile();
-        
-        // 釋放舊記憶體指標
         if(selectedImageSource.startsWith('blob:')) {
           URL.revokeObjectURL(selectedImageSource);
         }
-        
-        // 使用 createObjectURL 代替 FileReader 讀取 Base64
         selectedImageSource = URL.createObjectURL(blob);
         document.getElementById('img-preview').src = selectedImageSource;
         document.getElementById('preview-container').style.display = 'block';
@@ -322,7 +311,7 @@
     }
   }
 
-  // 2. 【優化點】相簿選取優化：改用極速不占記憶體的 Blob URL
+  // 2. 相簿選取優化：改用 Blob URL
   function previewPostImage(input) {
     const file = input.files[0];
     if (!file) return;
@@ -333,12 +322,10 @@
       return;
     }
 
-    // 釋放舊指標防止記憶體洩漏
     if(selectedImageSource.startsWith('blob:')) {
       URL.revokeObjectURL(selectedImageSource);
     }
 
-    // 瞬間建立網址，不需經過慢速的 Base64 轉換
     selectedImageSource = URL.createObjectURL(file);
     document.getElementById('img-preview').src = selectedImageSource;
     document.getElementById('preview-container').style.display = 'block';
@@ -369,13 +356,11 @@
         await fetchPosts();
         await fetchAllComments();
 
-        // 即時資料更新監聽
+        // 即時更新
         supabaseClient.channel('any-channel-name')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
             const newPost = payload.new;
-            
-            // 3. 【優化點】防止發布文章時，自己會看到兩篇重複的文章
-            if (mySubmittedPostIds.has(newPost.id)) return;
+            if (mySubmittedPostIds.has(newPost.id)) return; // 避免自發貼文重複渲染
 
             const exists = customPosts.some(p => p.id === newPost.id);
             if (!exists) {
@@ -452,16 +437,14 @@
 
     if (customPosts.length > 0) {
       loadMoreEl.style.display = 'block';
-      customPosts.forEach(p => {
-        feed.appendChild(createPostDOM(p));
-      });
+      customPosts.forEach(p => { feed.appendChild(createPostDOM(p)); });
     } else {
       loadMoreEl.style.display = 'none';
       feed.innerHTML = '<div class="empty-tips">目前沒有任何貼文<br>點擊下方按鈕，寫下第一篇新鮮事吧！</div>';
     }
   }
 
-  // 4. 【優化點】DOM 圖片渲染優化：加入 loading="lazy" 防止大量圖片滑動時掉幀
+  // 3. DOM 渲染優化：加入 loading="lazy" 防止大量圖片滑動時掉幀
   function createPostDOM(postObj) {
     const post = document.createElement('div');
     post.className = 'post-card';
@@ -567,10 +550,7 @@
     card.querySelector('.dislike-count').innerText = currentDislikes;
     
     if (isOnline) {
-      await supabaseClient.from('posts').update({ 
-        likes: currentLikes,
-        dislikes: currentDislikes 
-      }).eq('id', postId);
+      await supabaseClient.from('posts').update({ likes: currentLikes, dislikes: currentDislikes }).eq('id', postId);
     }
   }
 
@@ -641,7 +621,6 @@
   function openPostSheet() {
     document.getElementById('main-body').classList.add('sheet-open-post');
     document.body.style.overflow = 'hidden';
-    
     setTimeout(() => {
       document.getElementById('post-input').focus();
       scrollIntoViewIfNeeded(document.getElementById('post-input'));
@@ -652,7 +631,6 @@
     document.getElementById('main-body').classList.remove('sheet-open-post');
     document.body.style.overflow = 'auto';
     document.getElementById('post-input').value = '';
-    
     removeSelectedImage();
   }
 
@@ -668,26 +646,62 @@
     }
   }
 
+  // 4. 重要優化：串接 Supabase Storage 儲存桶，將圖片上傳至雲端產生永久公開網址
   async function submitPost() {
     const input = document.getElementById('post-input');
     const content = input.value.trim();
+    const fileInput = document.getElementById('post-file');
     
     if (!content && selectedImageSource === "") return;
 
     const id = generateUniqueId();
-    mySubmittedPostIds.add(id); // 防止重複渲染
+    mySubmittedPostIds.add(id);
 
     let finalBgOrImg = "";
 
-    if (selectedImageSource !== "") {
+    // 檢查是否有選取實體圖片檔案
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+      const file = fileInput.files[0];
+      
+      if (isOnline) {
+        // 產生不重複隨機檔名
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+        
+        // A. 上傳圖片到 Supabase Storage 的 post-images 儲存桶
+        const { data: uploadData, error: uploadError } = await supabaseClient
+          .storage
+          .from('post-images')
+          .upload(fileName, file);
+
+        if (uploadError) {
+          console.error("圖片上傳失敗:", uploadError);
+          alert("圖片上傳失敗，請重試");
+          return;
+        }
+
+        // B. 取得上傳後的公開圖片 URL 網址
+        const { data: publicUrlData } = supabaseClient
+          .storage
+          .from('post-images')
+          .getPublicUrl(fileName);
+          
+        finalBgOrImg = publicUrlData.publicUrl;
+      } else {
+        finalBgOrImg = selectedImageSource;
+      }
+    } else if (selectedImageSource.startsWith('http')) {
+      // 支援複製貼上的外部網址
       finalBgOrImg = selectedImageSource;
     } else {
+      // 無圖片則隨機給色塊背景
       const randomHue = Math.floor(Math.random() * 360);
       finalBgOrImg = `hsl(${randomHue}, 45%, 95%)`;
     }
 
     const newPostData = { id: id, content: content, bgColor: finalBgOrImg, likes: 0, dislikes: 0 };
 
+    // 先在本機網頁畫面上呈現
     customPosts.unshift(newPostData);
     saveToLocalBackup();
     
@@ -700,6 +714,7 @@
     closePostSheet();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
+    // C. 將完整、帶有正式圖片網址的資料新增至資料庫
     if (isOnline) {
       try {
         await supabaseClient.from('posts').insert([newPostData]);
@@ -709,7 +724,6 @@
     }
 
     input.value = "";
-    // 注意：這裡不清除 selectedImageSource，因為 DOM 中的 <img> 還在引用這個 Blob 網址
   }
 
   function escapeHtml(text) {
