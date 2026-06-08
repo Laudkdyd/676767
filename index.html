@@ -20,7 +20,7 @@
       background: white; width: 100%; max-width: 500px; 
       border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
       margin: 20px 0; overflow: hidden; 
-      animation: fadeIn 0.3s;
+      /* 💡 移除原本的 animation: fadeIn 0.3s; 防止任何卡片插入時產生的閃爍與跳動 */
     }
     .post-image { 
       width: 100%; min-height: 150px; height: auto; 
@@ -58,7 +58,7 @@
     .sheet-handle { width: 40px; height: 5px; background: #e0e0e0; border-radius: 10px; margin: 10px auto; flex-shrink: 0; }
     .sheet-header { padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; font-weight: bold; flex-shrink: 0; }
     .sheet-body { flex: 1; overflow-y: auto; padding: 15px; -webkit-overflow-scrolling: touch; }
-    .comment-item { padding: 10px; border-bottom: 1px solid #f9f9f9; font-size: 20px; line-height: 1.4; color: #333; animation: fadeIn 0.3s; }
+    .comment-item { padding: 10px; border-bottom: 1px solid #f9f9f9; font-size: 20px; line-height: 1.4; color: #333; }
     .no-comments { color: #aaa; text-align: center; margin-top: 50px; }
     .sheet-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; align-items: center; gap: 10px; background: white; flex-shrink: 0; box-sizing: border-box; }
     
@@ -69,7 +69,6 @@
     
     .sheet-open-comment #comment-sheet, .sheet-open-post #post-sheet { transform: translateY(0); }
     .sheet-open-comment #comment-backdrop, .sheet-open-post #post-backdrop { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     
     #load-more { padding: 30px; color: #888; font-size: 14px; display: none; }
     
@@ -174,13 +173,11 @@
         supabaseClient.channel('any-channel-name')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
             const newPost = payload.new;
-            // 檢查這篇是不是別人發的（避免自己發的重複塞入）
             const exists = customPosts.some(p => p.id === newPost.id);
             if (!exists) {
               customPosts.unshift(newPost);
               saveToLocalBackup();
               
-              // 🌟 終極流暢：直接把新 DOM 節點加到 Feed 最上方，拒絕重新繪製整頁，防止發抖
               const feed = document.getElementById('feed');
               const emptyTips = feed.querySelector('.empty-tips');
               if (emptyTips) emptyTips.remove();
@@ -472,7 +469,6 @@
     customPosts.unshift(newPostData);
     saveToLocalBackup();
     
-    // 本地發文也採用精準插入，絕不重整，防止發抖
     const feed = document.getElementById('feed');
     const emptyTips = feed.querySelector('.empty-tips');
     if (emptyTips) emptyTips.remove();
