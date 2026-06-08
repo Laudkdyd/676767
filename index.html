@@ -16,13 +16,6 @@
       font-weight: bold; position: sticky; top: 0; z-index: 10; 
       box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
     }
-    .db-status {
-      width: 100%; max-width: 500px; padding: 6px; text-align: center;
-      font-size: 11px; font-weight: bold; margin-top: 5px; border-radius: 6px;
-    }
-    .db-online { background-color: #d4edda; color: #155724; display: none; }
-    .db-offline { background-color: #fff3cd; color: #856404; }
-    
     .post-card { 
       background: white; width: 100%; max-width: 500px; 
       border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
@@ -93,7 +86,6 @@
 <body id="main-body">
 
 <div class="header">靠杯附中</div>
-<div id="status-indicator" class="db-status db-offline">正在連線至大容量資料庫...</div>
 
 <div id="feed"></div>
 <div id="load-more">滑動載入更多...</div>
@@ -142,9 +134,8 @@
 
 <script>
   let currentActivePost = null;
-  let isOnline = false; // 是否成功與 Supabase 連線
+  let isOnline = false; 
   
-  // 填入你的正確資訊
   const SUPABASE_URL = "https://diquelyhlucvufoqpxkh.supabase.co"; 
   const SUPABASE_ANON_KEY = "sb_publishable_GJvHju2fS7NO598COPpJyg_8zHxbTU5";
   
@@ -152,10 +143,9 @@
   try {
     supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   } catch(e) {
-    console.error("Supabase 初始化失敗", e);
+    console.error(e);
   }
 
-  // 備用 LocalStorage 資料庫儲存
   let customPosts = JSON.parse(localStorage.getItem('kfsh_posts')) || [];
   let commentStore = JSON.parse(localStorage.getItem('kfsh_comments')) || {};
   let localReactions = JSON.parse(localStorage.getItem('threads_local_reactions')) || {};
@@ -170,36 +160,23 @@
     return 'post-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
   }
 
-  // 初始化與即時監聽資料
   async function init() {
-    const indicator = document.getElementById('status-indicator');
-    
     if (supabaseClient) {
-      // 測試讀取以檢查 RLS 狀態
       const { data, error } = await supabaseClient.from('posts').select('*').limit(1);
       
       if (error) {
-        console.error("Supabase 讀取錯誤 (可能 RLS 未關閉):", error.message);
-        indicator.className = "db-status db-offline";
-        indicator.innerText = "⚠️ 資料庫拒絕連線 (請至後台關閉 posts 與 comments 表的 RLS 限制) 。目前為單機防護模式。";
         isOnline = false;
       } else {
-        indicator.className = "db-status db-online";
-        indicator.innerText = "🟢 已成功連線至大容量雲端資料庫";
-        indicator.style.display = "block";
         isOnline = true;
-        
         await fetchPosts();
         await fetchAllComments();
 
-        // 監聽 posts 變動
         supabaseClient.channel('public:posts')
           .on('postgres_changes', { event: '*', filter: 'schema=public&table=posts' }, async () => {
             await fetchPosts();
             renderFeed();
           }).subscribe();
 
-        // 監聽 comments 變動
         supabaseClient.channel('public:comments')
           .on('postgres_changes', { event: 'INSERT', filter: 'schema=public&table=comments' }, async (payload) => {
             const newComment = payload.new;
@@ -218,14 +195,10 @@
             }
           }).subscribe();
       }
-    } else {
-      indicator.innerText = "❌ 網址或金鑰錯誤，進入單機安全模式。";
     }
-
     renderFeed();
   }
 
-  // 從網路取得所有貼文
   async function fetchPosts() {
     if (!isOnline) return;
     const { data, error } = await supabaseClient.from('posts').select('*');
@@ -235,7 +208,6 @@
     }
   }
 
-  // 從網路取得所有留言
   async function fetchAllComments() {
     if (!isOnline) return;
     const { data, error } = await supabaseClient.from('comments').select('*');
@@ -249,7 +221,6 @@
     }
   }
 
-  // 渲染首頁
   function renderFeed() {
     const feed = document.getElementById('feed');
     const loadMoreEl = document.getElementById('load-more');
@@ -343,13 +314,11 @@
       }
     }
 
-    // 同步到變數與快取
     postData.likes = currentLikes;
     postData.dislikes = currentDislikes;
     saveToLocalBackup();
     renderFeed();
     
-    // 如果在線，同步到雲端 Supabase
     if (isOnline) {
       await supabaseClient.from('posts').update({ 
         likes: currentLikes,
@@ -401,7 +370,6 @@
     commentStore[postId].push(text);
     saveToLocalBackup();
 
-    // 如果在線，新增到雲端 Supabase
     if (isOnline) {
       await supabaseClient.from('comments').insert([{ post_id: postId, content: text }]);
     } else {
@@ -464,11 +432,9 @@
     const randomBg = `hsl(${randomHue}, 45%, 95%)`;
     const newPostData = { id: id, content: content, bgColor: randomBg, likes: 0, dislikes: 0 };
 
-    // 優先推入本地陣列渲染
     customPosts.unshift(newPostData);
     saveToLocalBackup();
 
-    // 如果在線，推送到雲端 Supabase
     if (isOnline) {
       await supabaseClient.from('posts').insert([newPostData]);
     } else {
@@ -498,7 +464,6 @@
   });
   observer.observe(document.getElementById('load-more'));
 
-  // 執行初始化
   init();
 </script>
 </body>
