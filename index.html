@@ -40,95 +40,34 @@
       word-break: break-word;
     }
     
-    /* =================================================== */
-    /* 按鈕樣式（電腦版） */
-    /* =================================================== */
-    .interaction-group { 
-      display: flex; 
-      gap: 15px; 
-      padding: 6px 15px; 
-    }
-    .btn-wrapper { 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      gap: 1px; 
-      width: 45px; 
-    }
-    .icon-btn { 
-      background: none; 
-      border: none; 
-      cursor: pointer; 
-      padding: 4px; 
-      transition: 0.2s; 
-    }
+    .interaction-group { display: flex; gap: 15px; padding: 6px 15px; }
+    .btn-wrapper { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 45px; }
+    .icon-btn { background: none; border: none; cursor: pointer; padding: 4px; transition: 0.2s; }
     .icon-btn:active { transform: scale(0.9); }
     
-    .icon-svg { 
-      fill: white; 
-      stroke: black; 
-      stroke-width: 2; 
-      width: 18px; 
-      height: 18px; 
-    }
-    
+    .icon-svg { fill: white; stroke: black; stroke-width: 2; width: 18px; height: 18px; }
     .heart.active .icon-svg { fill: #ff3040; stroke: #ff3040; }
     .dislike.active .icon-svg { fill: #000; stroke: #000; }
-    
-    .label { 
-      font-size: 10px; 
-      color: #606060; 
-      font-weight: 500; 
-    }
+    .label { font-size: 10px; color: #606060; font-weight: 500; }
 
-    /* =================================================== */
-    /* RWD 手機版自動優化 */
-    /* =================================================== */
     @media (max-width: 600px) {
-      .interaction-group {
-        gap: 25px !important;       
-        padding: 10px 15px !important;
-      }
-      .btn-wrapper {
-        width: 55px !important;
-      }
-      .icon-btn {
-        padding: 6px !important;     
-      }
-      .icon-svg {
-        width: 24px !important;      
-        height: 24px !important;
-      }
-      .label {
-        font-size: 12px !important;  
-      }
-      .comment-input, .post-textarea {
-        font-size: 16px !important; 
-      }
+      .interaction-group { gap: 25px !important; padding: 10px 15px !important; }
+      .btn-wrapper { width: 55px !important; }
+      .icon-btn { padding: 6px !important; }
+      .icon-svg { width: 24px !important; height: 24px !important; }
+      .label { font-size: 12px !important; }
+      .comment-input, .post-textarea { font-size: 16px !important; }
     }
-    /* =================================================== */
 
     .post-card.disabled-card .icon-btn { cursor: not-allowed; opacity: 0.3; }
     .post-card.disabled-card .icon-btn:active { transform: none; }
     .post-card.disabled-card .label { opacity: 0.3; }
 
     .backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 100; }
-    
     .bottom-sheet {
-      position: fixed; 
-      bottom: 0; 
-      left: 0; 
-      width: 100%; 
-      height: 75dvh; 
-      max-height: 75%;
-      background: white; 
-      border-top-left-radius: 20px; 
-      border-top-right-radius: 20px;
-      z-index: 101; 
-      transform: translateY(100%);
-      transition: transform 0.3s ease-out; 
-      display: flex; 
-      flex-direction: column;
+      position: fixed; bottom: 0; left: 0; width: 100%; height: 75dvh; max-height: 75%;
+      background: white; border-top-left-radius: 20px; border-top-right-radius: 20px;
+      z-index: 101; transform: translateY(100%); transition: transform 0.3s ease-out; display: flex; flex-direction: column;
     }
     .sheet-handle { width: 40px; height: 5px; background: #e0e0e0; border-radius: 10px; margin: 10px auto; flex-shrink: 0; }
     .sheet-header { padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; font-weight: bold; flex-shrink: 0; }
@@ -139,7 +78,6 @@
     
     .comment-input, .post-textarea { flex: 1; background: #f0f0f0; border: none; padding: 12px 15px; border-radius: 20px; outline: none; font-size: 14px; }
     .post-textarea { border-radius: 12px; height: 150px; resize: none; font-family: inherit; line-height: 1.5; }
-    
     .action-btn { color: #0095f6; border:none; background:none; font-weight:bold; cursor:pointer; opacity: 0.5; font-size: 14px; }
     .action-btn.active { opacity: 1; }
     
@@ -156,7 +94,6 @@
     }
     .nav-btn { background: none; border: none; cursor: pointer; padding: 10px 20px; display: flex; align-items: center; justify-content: center; }
     .nav-icon { width: 28px; height: 28px; fill: none; stroke: #111; stroke-width: 2; }
-    
     .empty-tips { color: #999; margin-top: 100px; text-align: center; font-size: 15px; line-height: 1.6; }
   </style>
 </head>
@@ -206,28 +143,19 @@
   </button>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
   let currentActivePost = null;
-  let scrollColorIndex = 0; 
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyB2zpNXXabpJqOeZxL4KB1chQjAB2LT_0I",
-    authDomain: "project-2481638426562755907.firebaseapp.com",
-    databaseURL: "https://project-2481638426562755907-default-rtdb.firebaseio.com/", 
-    projectId: "project-2481638426562755907",
-    storageBucket: "project-2481638426562755907.firebasestorage.app",
-    messagingSenderId: "50961584141",
-    appId: "1:50961584141:web:f5ca6704f12ad2a90d8544"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const database = firebase.database();
+  
+  // 已經填入你的專屬 Supabase 資訊
+  const SUPABASE_URL = "https://diquelyhlucvufoqpxkh.supabase.co"; 
+  const SUPABASE_ANON_KEY = "sb_publishable_GJvHju2fS7NO598COPpJyg_8zHxbTU5";
+  
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let customPosts = [];
-  let commentStore = {};
+  let commentStore = {}; 
   let localReactions = JSON.parse(localStorage.getItem('threads_local_reactions')) || {};
 
   function saveLocalReactions() {
@@ -238,65 +166,90 @@
     return 'post-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
   }
 
-  database.ref('posts').on('value', (snapshot) => {
-    const data = snapshot.val();
+  // 初始化與即時監聽資料
+  async function init() {
+    await fetchPosts();
+    await fetchAllComments();
+    renderFeed();
+
+    // 監聽 posts 資料表變動 (新增/修改)
+    supabase.channel('public:posts')
+      .on('postgres_changes', { event: '*', filter: 'schema=public&table=posts' }, async () => {
+        await fetchPosts();
+        renderFeed();
+      }).subscribe();
+
+    // 監聽 comments 資料表變動
+    supabase.channel('public:comments')
+      .on('postgres_changes', { event: 'INSERT', filter: 'schema=public&table=comments' }, async (payload) => {
+        const newComment = payload.new;
+        if (!commentStore[newComment.post_id]) commentStore[newComment.post_id] = [];
+        commentStore[newComment.post_id].push(newComment.content);
+        
+        // 更新當前打開的留言視窗
+        if (currentActivePost && currentActivePost.getAttribute('data-post-id') === newComment.post_id) {
+          renderComments(newComment.post_id);
+        }
+        // 更新首頁上的計數器
+        const card = document.querySelector(`[data-post-id="${newComment.post_id}"]`);
+        if (card) {
+          card.querySelector('.comment-count').innerText = commentStore[newComment.post_id].length;
+        }
+      }).subscribe();
+  }
+
+  // 取得所有貼文
+  async function fetchPosts() {
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*');
+    
+    if (error) {
+      console.error(error);
+      return;
+    }
+    customPosts = data ? data.reverse() : [];
+  }
+
+  // 取得所有留言並分類
+  async function fetchAllComments() {
+    const { data, error } = await supabase.from('comments').select('*');
+    if (error) return;
+    
+    commentStore = {};
+    data.forEach(c => {
+      if (!commentStore[c.post_id]) commentStore[c.post_id] = [];
+      commentStore[c.post_id].push(c.content);
+    });
+  }
+
+  // 渲染首頁
+  function renderFeed() {
     const feed = document.getElementById('feed');
     const loadMoreEl = document.getElementById('load-more');
     feed.innerHTML = '';
-    
-    if (data && typeof data === 'object') {
-      customPosts = Object.values(data).filter(p => {
-        return p && 
-               p.id && 
-               p.content && 
-               p.content.trim() !== '' && 
-               !p.content.includes('[object Object]') &&
-               !p.content.includes('Error') &&
-               !p.id.startsWith('temp-');
-      }).reverse();
-    } else {
-      customPosts = [];
-    }
 
     if (customPosts.length > 0) {
       loadMoreEl.style.display = 'block';
       customPosts.forEach(p => {
-        const postCard = createPostDOM(p, false); 
-        feed.appendChild(postCard);
+        feed.appendChild(createPostDOM(p));
       });
     } else {
       loadMoreEl.style.display = 'none';
       feed.innerHTML = '<div class="empty-tips">目前沒有任何貼文<br>點擊下方按鈕，寫下第一篇新鮮事吧！</div>';
     }
-  });
+  }
 
-  database.ref('comments').on('value', (snapshot) => {
-    const data = snapshot.val();
-    commentStore = (data && typeof data === 'object') ? data : {};
-    
-    customPosts.forEach(p => {
-      const card = document.querySelector(`[data-post-id="${p.id}"]`);
-      if (card) {
-        const cCount = commentStore[p.id] ? Object.keys(commentStore[p.id]).length : 0;
-        card.querySelector('.comment-count').innerText = cCount;
-      }
-    });
-  });
-
-  function createPostDOM(postObj, isDummy = false) {
+  function createPostDOM(postObj) {
     const post = document.createElement('div');
-    post.className = isDummy ? 'post-card disabled-card' : 'post-card';
+    post.className = 'post-card';
     post.setAttribute('data-post-id', postObj.id);
-    if (isDummy) {
-      post.setAttribute('data-dummy', 'true');
-    }
     
-    const cCount = commentStore[postObj.id] ? Object.keys(commentStore[postObj.id]).length : 0;
+    const cCount = commentStore[postObj.id] ? commentStore[postObj.id].length : 0;
     const status = localReactions[postObj.id] || { isHeartActive: false, isDislikeActive: false };
     const heartClass = status.isHeartActive ? 'heart active' : 'heart';
     const dislikeClass = status.isDislikeActive ? 'dislike active' : 'dislike';
 
-    // 修正：將原本的「不喜歡」文字更換為 ${postObj.dislikes || 0} 數字顯示
     post.innerHTML = `
       <div class="post-image" style="background-color: ${postObj.bgColor || '#e9ecef'}">
         ${postObj.content ? escapeHtml(postObj.content) : ''}
@@ -324,10 +277,8 @@
     return post;
   }
 
-  function handleReaction(clickedBtn, type) {
+  async function handleReaction(clickedBtn, type) {
     const card = clickedBtn.closest('.post-card');
-    if (card.getAttribute('data-dummy') === 'true') return;
-
     const postId = card.getAttribute('data-post-id');
     const postData = customPosts.find(p => p.id === postId);
     if (!postData) return;
@@ -367,16 +318,16 @@
     }
 
     saveLocalReactions();
-    database.ref('posts/' + postId).update({ 
+    
+    // 更新 Supabase 資料
+    await supabase.from('posts').update({ 
       likes: currentLikes,
       dislikes: currentDislikes 
-    });
+    }).eq('id', postId);
   }
 
   function openComment(btn) {
     currentActivePost = btn.closest('.post-card');
-    if (currentActivePost.getAttribute('data-dummy') === 'true') return;
-
     const postId = currentActivePost.getAttribute('data-post-id');
     renderComments(postId);
     document.getElementById('main-body').classList.add('sheet-open-comment');
@@ -408,13 +359,15 @@
     }
   }
 
-  function submitComment() {
+  async function submitComment() {
     const input = document.getElementById('comment-input');
     const postId = currentActivePost.getAttribute('data-post-id');
     const text = input.value.trim();
     if (!text) return;
 
-    database.ref('comments/' + postId).push(text);
+    // 新增留言到 Supabase
+    await supabase.from('comments').insert([{ post_id: postId, content: text }]);
+
     input.value = '';
     checkCommentInput();
     closeComment();
@@ -422,8 +375,7 @@
 
   function renderComments(postId) {
     const list = document.getElementById('comment-list');
-    const commentsObj = commentStore[postId] || {};
-    const comments = Object.values(commentsObj);
+    const comments = commentStore[postId] || [];
     if (comments.length === 0) {
       list.innerHTML = '<div class="no-comments">尚未有任何回覆，成為第一個留言的人吧！</div>';
     } else {
@@ -461,7 +413,7 @@
     }
   }
 
-  function submitPost() {
+  async function submitPost() {
     const input = document.getElementById('post-input');
     const content = input.value.trim();
     if (!content) return;
@@ -469,10 +421,11 @@
     const id = generateUniqueId();
     const randomHue = Math.floor(Math.random() * 360);
     const randomBg = `hsl(${randomHue}, 45%, 95%)`;
-    // 修正：新建立貼文時預設帶入 dislikes: 0
     const newPostData = { id: id, content: content, bgColor: randomBg, likes: 0, dislikes: 0 };
 
-    database.ref('posts/' + id).set(newPostData);
+    // 新增貼文到 Supabase
+    await supabase.from('posts').insert([newPostData]);
+
     closePostSheet();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -484,9 +437,7 @@
 
   function scrollIntoViewIfNeeded(el) {
     if (window.visualViewport) {
-      setTimeout(() => {
-        el.scrollIntoView({ block: 'center' });
-      }, 100);
+      setTimeout(() => { el.scrollIntoView({ block: 'center' }); }, 100);
     }
   }
 
@@ -497,6 +448,9 @@
     }
   });
   observer.observe(document.getElementById('load-more'));
+
+  // 執行初始化
+  init();
 </script>
 </body>
 </html>
