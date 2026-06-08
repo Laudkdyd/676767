@@ -14,7 +14,7 @@
     .header { 
       width: 100%; background: white; padding: 15px; text-align: center; 
       font-weight: bold; position: sticky; top: 0; z-index: 10; 
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1); box-sizing: border-box;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
     }
     
     #feed {
@@ -44,8 +44,19 @@
       word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;
     }
 
-    .post-card-img { width: 100%; max-height: 450px; object-fit: cover; display: block; }
-    .post-card-text-with-img { padding: 15px 20px; font-size: 16px; color: #212529; line-height: 1.5; background: white; }
+    .post-card-img {
+      width: 100%;
+      max-height: 450px;
+      object-fit: cover;
+      display: block;
+    }
+    .post-card-text-with-img {
+      padding: 15px 20px;
+      font-size: 16px;
+      color: #212529;
+      line-height: 1.5;
+      background: white;
+    }
     
     .interaction-group { display: flex; gap: 15px; padding: 10px 15px; border-top: 1px solid #f0f2f5; }
     .btn-wrapper { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 45px; }
@@ -86,7 +97,12 @@
     .action-btn.active { opacity: 1; }
     
     .upload-zone { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
-    .upload-buttons-container { display: flex; align-items: center; gap: 12px; }
+    
+    .upload-buttons-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
     .file-input-label {
       display: inline-flex; align-items: center; gap: 5px; color: #0095f6; 
@@ -94,13 +110,6 @@
       padding: 8px 14px; background: #f0f8ff; border-radius: 20px;
     }
     .file-input-label:active { background: #e0f0ff; }
-
-    .retry-upload-btn {
-      display: inline-flex; align-items: center; gap: 3px; color: #666;
-      font-size: 12px; cursor: pointer; padding: 6px 10px; background: #eee;
-      border-radius: 20px; font-weight: normal; border: none;
-    }
-    .retry-upload-btn:active { background: #ddd; }
 
     .image-preview-container { position: relative; display: none; width: 100px; height: 100px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
     .image-preview { width: 100%; height: 100%; object-fit: cover; }
@@ -132,11 +141,6 @@
     .nav-btn:active { transform: scale(0.95); }
     .nav-icon { width: 26px; height: 26px; fill: none; stroke: #111; stroke-width: 2.5; }
     .empty-tips { color: #999; margin-top: 100px; text-align: center; font-size: 15px; line-height: 1.6; }
-
-    /* 💡 極其重要：獨立於彈出層最外圍的隱形防封鎖上傳盒 */
-    #global-input-dock {
-      position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: 9999;
-    }
   </style>
 </head>
 <body id="main-body">
@@ -145,10 +149,6 @@
 
 <div id="feed"></div>
 <div id="load-more">滑動載入更多...</div>
-
-<div id="global-input-dock">
-  <input type="file" id="post-file" accept="image/jpeg,image/png,image/gif,image/webp" onchange="previewPostImage(this)">
-</div>
 
 <div id="comment-backdrop" class="backdrop" onclick="closeComment()"></div>
 <div id="comment-sheet" class="bottom-sheet">
@@ -183,11 +183,10 @@
           <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           加入圖片
         </div>
-        
-        <button class="retry-upload-btn" onclick="forceSystemReset(event)">
-          <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-          點擊重試
-        </button>
+      </div>
+      
+      <div id="input-box-wrapper">
+        <input type="file" id="post-file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" onchange="previewPostImage(this)">
       </div>
       
       <div id="preview-container" class="image-preview-container">
@@ -240,37 +239,25 @@
     return 'post-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
   }
 
-  // 💡 優化後的相簿開啟：徹底解決內嵌沙盒 App 的死結
   function openPhotoGallery(e) {
     if(e) e.preventDefault();
     
-    // 1. 強制收起任何虛擬鍵盤，還原瀏覽器可視範圍
-    if (document.activeElement) document.activeElement.blur();
+    if (document.activeElement) {
+      document.activeElement.blur();
+    }
     document.getElementById('post-input').blur();
 
-    // 2. 銷毀舊的 input，並在獨立於彈出層之外的 global dock 重建
-    const dock = document.getElementById('global-input-dock');
-    dock.innerHTML = `<input type="file" id="post-file" accept="image/jpeg,image/png,image/gif,image/webp" style="width:100%; height:100%;">`;
+    const wrapper = document.getElementById('input-box-wrapper');
+    wrapper.innerHTML = `<input type="file" id="post-file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">`;
     
     const fileInput = document.getElementById('post-file');
     fileInput.onchange = function() {
       previewPostImage(this);
     };
 
-    // 3. 延遲觸發，確保 DOM 完全獨立並且避開點擊穿透
     setTimeout(() => {
       fileInput.click();
-    }, 80);
-  }
-
-  function forceSystemReset(e) {
-    if(e) e.preventDefault();
-    const currentText = document.getElementById('post-input').value;
-    if (currentText.trim().length > 0) {
-      sessionStorage.setItem('kfsh_pending_text', currentText);
-    }
-    sessionStorage.setItem('kfsh_reopen_post', 'true');
-    window.location.reload();
+    }, 60);
   }
 
   function previewPostImage(input) {
@@ -304,14 +291,6 @@
   }
 
   async function init() {
-    const savedText = sessionStorage.getItem('kfsh_pending_text');
-    const shouldReopen = sessionStorage.getItem('kfsh_reopen_post');
-    
-    if (savedText) {
-      document.getElementById('post-input').value = savedText;
-      sessionStorage.removeItem('kfsh_pending_text');
-    }
-
     if (supabaseClient) {
       const { data, error } = await supabaseClient.from('posts').select('*').limit(1);
       if (error) {
@@ -368,12 +347,6 @@
       }
     }
     renderFeed();
-
-    if (shouldReopen === 'true') {
-      sessionStorage.removeItem('kfsh_reopen_post');
-      openPostSheet();
-      checkPostInput();
-    }
   }
 
   async function fetchPosts() {
@@ -551,9 +524,11 @@
     const input = document.getElementById('comment-input');
     const btn = document.getElementById('post-btn');
     if (input.value.trim().length > 0) {
-      btn.disabled = false; btn.classList.add('active');
+      btn.disabled = false;
+      btn.classList.add('active');
     } else {
-      btn.disabled = true; btn.classList.remove('active');
+      btn.disabled = true;
+      btn.classList.remove('active');
     }
   }
 
@@ -618,9 +593,11 @@
     const input = document.getElementById('post-input');
     const btn = document.getElementById('submit-post-btn');
     if (input.value.trim().length > 0 || selectedImageBase64 !== "") {
-      btn.disabled = false; btn.classList.add('active');
+      btn.disabled = false;
+      btn.classList.add('active');
     } else {
-      btn.disabled = true; btn.classList.remove('active');
+      btn.disabled = true;
+      btn.classList.remove('active');
     }
   }
 
@@ -641,6 +618,7 @@
     }
 
     const newPostData = { id: id, content: content, bgColor: finalBgOrImg, likes: 0, dislikes: 0 };
+
     customPosts.unshift(newPostData);
     saveToLocalBackup();
     
