@@ -17,10 +17,10 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
     }
     
-    /* 💡 核心修正：限制貼文牆容器的寬度，並將其水平置中，解決偏左問題 */
+    /* 💡 微調：將最大寬度從 800px 縮小到 620px，視覺比例更精緻舒服 */
     #feed {
       width: 100%;
-      max-width: 800px;
+      max-width: 620px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
@@ -30,7 +30,7 @@
     .post-card { 
       background: white !important; 
       width: 92% !important;          
-      max-width: 800px !important;    
+      max-width: 620px !important;    /* 💡 同步改成 620px */
       border-radius: 12px !important; 
       box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important; 
       margin: 20px 0 !important; 
@@ -67,7 +67,7 @@
 
     .backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 100; }
     .bottom-sheet {
-      position: fixed; bottom: 0; left: 50%; width: 100%; max-width: 800px; height: 75dvh; max-height: 75%;
+      position: fixed; bottom: 0; left: 50%; width: 100%; max-width: 620px; height: 75dvh; max-height: 75%;
       background: white; border-top-left-radius: 20px; border-top-right-radius: 20px;
       z-index: 101; transform: translate(-50%, 100%); transition: transform 0.3s ease-out; display: flex; flex-direction: column;
     }
@@ -83,14 +83,12 @@
     .action-btn { color: #0095f6; border:none; background:none; font-weight:bold; cursor:pointer; opacity: 0.5; font-size: 14px; }
     .action-btn.active { opacity: 1; }
     
-    /* 彈出視窗置中修正 */
     .sheet-open-comment #comment-sheet { transform: translate(-50%, 0); }
     .sheet-open-post #post-sheet { transform: translate(-50%, 0); }
     .sheet-open-comment #comment-backdrop, .sheet-open-post #post-backdrop { display: block; }
     
     #load-more { padding: 30px; color: #888; font-size: 14px; display: none; text-align: center; width: 100%; }
     
-    /* 💡 優化底部導覽列：在大螢幕上也能完美置中並融入背景 */
     .bottom-nav {
       position: fixed; bottom: 0; left: 0; width: 100%; 
       display: flex; justify-content: center; align-items: center; 
