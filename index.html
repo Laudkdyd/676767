@@ -406,7 +406,6 @@
   }
 
   async function fetchPosts() {
-    if (!isOnline) return;
     const { data, error } = await supabaseClient.from('posts').select('*').order('created_at', { ascending: true });
     if (!error && data) {
       customPosts = data.reverse();
@@ -415,7 +414,6 @@
   }
 
   async function fetchAllComments() {
-    if (!isOnline) return;
     const { data, error } = await supabaseClient.from('comments').select('*');
     if (!error && data) {
       commentStore = {};
@@ -545,9 +543,7 @@
     card.querySelector('.heart-count').innerText = currentLikes;
     card.querySelector('.dislike-count').innerText = currentDislikes;
     
-    if (isOnline) {
-      await supabaseClient.from('posts').update({ likes: currentLikes, dislikes: currentDislikes }).eq('id', postId);
-    }
+    await supabaseClient.from('posts').update({ likes: currentLikes, dislikes: currentDislikes }).eq('id', postId);
   }
 
   function openComment(btn) {
@@ -592,12 +588,7 @@
     commentStore[postId].push(text);
     saveToLocalBackup();
 
-    if (isOnline) {
-      await supabaseClient.from('comments').insert([{ post_id: postId, content: text }]);
-    } else {
-      renderComments(postId);
-      renderFeed();
-    }
+    await supabaseClient.from('comments').insert([{ post_id: postId, content: text }]);
 
     input.value = '';
     checkCommentInput();
@@ -642,7 +633,7 @@
     }
   }
 
-  // 強化整合與即時報錯功能
+  // 移除了 offline 檢查阻礙，直接強制作動上傳
   async function submitPost() {
     const input = document.getElementById('post-input');
     const content = input.value.trim();
@@ -657,35 +648,31 @@
 
     if (fileInput && fileInput.files && fileInput.files[0]) {
       const file = fileInput.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
       
-      if (isOnline) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        
-        console.log("正在嘗試上傳圖片:", fileName);
-        
-        // A. 上傳圖片到 Supabase Storage
+      try {
+        // 強制上傳雲端 Storage
         const { data: uploadData, error: uploadError } = await supabaseClient
           .storage
           .from('post-images')
           .upload(fileName, file);
 
         if (uploadError) {
-          console.error("【除錯提示】圖片上傳失敗:", uploadError);
-          alert(`圖片上傳失敗！\n請檢查是否建立名稱為 post-images 的 Storage Bucket 且開啟 Public 權限。\n錯誤內容：${uploadError.message}`);
+          console.error("Storage 上傳失敗:", uploadError);
+          alert(`Storage 上傳失敗！\n錯誤描述：${uploadError.message}\n請確認後台 Bucket 名稱為 post-images 且 RLS 政策已開。`);
           return;
         }
 
-        // B. 取得上傳後的公開圖片網址
         const { data: publicUrlData } = supabaseClient
           .storage
           .from('post-images')
           .getPublicUrl(fileName);
           
         finalBgOrImg = publicUrlData.publicUrl;
-        console.log("【除錯提示】成功生成雲端網址:", finalBgOrImg);
-      } else {
-        finalBgOrImg = selectedImageSource;
+      } catch (err) {
+        alert(`連線到 Supabase 失敗！請確認金鑰是否有效。\n描述：${err.message}`);
+        return;
       }
     } else if (selectedImageSource.startsWith('http')) {
       finalBgOrImg = selectedImageSource;
@@ -708,16 +695,13 @@
     closePostSheet();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    if (isOnline) {
-      try {
-        const { error: insertError } = await supabaseClient.from('posts').insert([newPostData]);
-        if (insertError) {
-          console.error("【除錯提示】資料庫寫入失敗:", insertError);
-          alert(`貼文文字儲存失敗！\n請檢查資料表 posts 的 bgColor 欄位型態是否已設為 text。\n錯誤內容：${insertError.message}`);
-        }
-      } catch (e) {
-        console.error("Supabase 系統發生異常:", e);
+    try {
+      const { error: insertError } = await supabaseClient.from('posts').insert([newPostData]);
+      if (insertError) {
+        alert(`文字資料庫儲存失敗！\n錯誤描述：${insertError.message}\n請檢查 posts 資料表的 bgColor 欄位型態是否為 text。`);
       }
+    } catch (e) {
+      console.error("資料庫寫入異常:", e);
     }
 
     input.value = "";
