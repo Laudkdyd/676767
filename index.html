@@ -40,42 +40,48 @@
       word-break: break-word;
     }
     
-    /* 調整：縮小按鈕整體的左右間距與上下內距 */
+    /* 1. 縮小底部的工具列空間與按鈕間距 */
     .interaction-group { 
-      display: flex; 
-      gap: 20px; 
-      padding: 8px 15px; 
+      display: flex !important; 
+      gap: 15px !important; 
+      padding: 6px 15px !important; 
     }
-    /* 調整：縮小包裝按鈕的寬度 */
+    /* 2. 將包裝區塊寬度縮小 */
     .btn-wrapper { 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      gap: 2px; 
-      width: 50px; 
+      display: flex !important; 
+      flex-direction: column !important; 
+      align-items: center !important; 
+      gap: 1px !important; 
+      width: 45px !important; 
     }
-    /* 調整：內縮按鈕的 padding，減少無用空間 */
+    /* 3. 縮減按鈕點擊範圍的內距 */
     .icon-btn { 
-      background: none; 
-      border: none; 
-      cursor: pointer; 
-      padding: 6px; 
-      transition: 0.2s; 
+      background: none !important; 
+      border: none !important; 
+      cursor: pointer !important; 
+      padding: 4px !important; 
+      transition: 0.2s !important; 
     }
-    .icon-btn:active { transform: scale(0.9); }
-    /* 調整：將 SVG 圖示大小從 28px 縮小至 22px */
+    .icon-btn:active { transform: scale(0.9) !important; }
+    
+    /* 4. 強制將 SVG 愛心/留言/倒讚圖示縮小到 18px (原本是 28px) */
     .icon-svg { 
-      fill: white; 
-      stroke: black; 
-      stroke-width: 2; 
-      width: 22px; 
-      height: 22px; 
+      fill: white !important; 
+      stroke: black !important; 
+      stroke-width: 2 !important; 
+      width: 18px !important; 
+      height: 18px !important; 
     }
     
-    .heart.active .icon-svg { fill: #ff3040; stroke: #ff3040; }
-    .dislike.active .icon-svg { fill: #000; stroke: #000; }
-    /* 調整：數字與文字標籤縮小至 11px */
-    .label { font-size: 11px; color: #606060; font-weight: 500; }
+    .heart.active .icon-svg { fill: #ff3040 !important; stroke: #ff3040 !important; }
+    .dislike.active .icon-svg { fill: #000 !important; stroke: #000 !important; }
+    
+    /* 5. 強制將下方的數字與文字標籤縮小到 10px */
+    .label { 
+      font-size: 10px !important; 
+      color: #606060 !important; 
+      font-weight: 500 !important; 
+    }
 
     .post-card.disabled-card .icon-btn { cursor: not-allowed; opacity: 0.3; }
     .post-card.disabled-card .icon-btn:active { transform: none; }
