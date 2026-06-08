@@ -103,7 +103,7 @@
         font-size: 12px !important;  
       }
       .comment-input, .post-textarea {
-        font-size: 16px !important; /* 避免 iOS 自動放大網頁 */
+        font-size: 16px !important; 
       }
     }
     /* =================================================== */
@@ -114,13 +114,12 @@
 
     .backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 100; }
     
-    /* 修正：優化底層彈出視窗，改用 transform 位移並使用 dynamic viewport height (dvh) */
     .bottom-sheet {
       position: fixed; 
       bottom: 0; 
       left: 0; 
       width: 100%; 
-      height: 75dvh; /* 動態高度，會隨鍵盤自動縮放 */
+      height: 75dvh; 
       max-height: 75%;
       background: white; 
       border-top-left-radius: 20px; 
@@ -144,7 +143,6 @@
     .action-btn { color: #0095f6; border:none; background:none; font-weight:bold; cursor:pointer; opacity: 0.5; font-size: 14px; }
     .action-btn.active { opacity: 1; }
     
-    /* 修正：改成控制 transform 控制滑出滑入，避免 fixed 屬性在 iOS 鍵盤彈出時失效 */
     .sheet-open-comment #comment-sheet, .sheet-open-post #post-sheet { transform: translateY(0); }
     .sheet-open-comment #comment-backdrop, .sheet-open-post #post-backdrop { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -298,6 +296,7 @@
     const heartClass = status.isHeartActive ? 'heart active' : 'heart';
     const dislikeClass = status.isDislikeActive ? 'dislike active' : 'dislike';
 
+    // 修正：將原本的「不喜歡」文字更換為 ${postObj.dislikes || 0} 數字顯示
     post.innerHTML = `
       <div class="post-image" style="background-color: ${postObj.bgColor || '#e9ecef'}">
         ${postObj.content ? escapeHtml(postObj.content) : ''}
@@ -319,7 +318,7 @@
           <button class="icon-btn ${dislikeClass}" onclick="handleReaction(this, 'dislike')">
             <svg class="icon-svg" viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>
           </button>
-          <span class="label">不喜歡</span>
+          <span class="label dislike-count">${postObj.dislikes || 0}</span>
         </div>
       </div>`;
     return post;
@@ -383,7 +382,6 @@
     document.getElementById('main-body').classList.add('sheet-open-comment');
     document.body.style.overflow = 'hidden';
     
-    // 修正：針對 iOS 延遲聚焦，防止畫面瞬間抽動大跳
     setTimeout(() => {
       document.getElementById('comment-input').focus();
       scrollIntoViewIfNeeded(document.getElementById('comment-input'));
@@ -395,7 +393,7 @@
     document.body.style.overflow = 'auto';
     document.getElementById('comment-input').value = '';
     checkCommentInput();
-    window.scrollTo(0, window.scrollY); // 修正 iOS 關閉後的頁面空白 Bug
+    window.scrollTo(0, window.scrollY); 
   }
 
   function checkCommentInput() {
@@ -471,7 +469,8 @@
     const id = generateUniqueId();
     const randomHue = Math.floor(Math.random() * 360);
     const randomBg = `hsl(${randomHue}, 45%, 95%)`;
-    const newPostData = { id: id, content: content, bgColor: randomBg, likes: 0 };
+    // 修正：新建立貼文時預設帶入 dislikes: 0
+    const newPostData = { id: id, content: content, bgColor: randomBg, likes: 0, dislikes: 0 };
 
     database.ref('posts/' + id).set(newPostData);
     closePostSheet();
@@ -483,7 +482,6 @@
     return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   }
 
-  // 修正：輔助函式，確保 iOS 輸入框正確呈現在可視範圍內，不觸發外層大滾動
   function scrollIntoViewIfNeeded(el) {
     if (window.visualViewport) {
       setTimeout(() => {
