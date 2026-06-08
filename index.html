@@ -9,7 +9,7 @@
       background-color: #f0f2f5; margin: 0; 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
       display: flex; flex-direction: column; align-items: center;
-      padding-bottom: 70px;
+      padding-bottom: 90px;
     }
     .header { 
       width: 100%; background: white; padding: 15px; text-align: center; 
@@ -17,11 +17,20 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
     }
     
-    /* 💡 重新打造的貼文外框：強制放大，並加上 !important 確保不被其他樣式吃掉 */
+    /* 💡 核心修正：限制貼文牆容器的寬度，並將其水平置中，解決偏左問題 */
+    #feed {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
     .post-card { 
       background: white !important; 
-      width: 92% !important;          /* 手機時左右留下一點點舒適間距 */
-      max-width: 800px !important;    /* 這裡改成 800px，讓大螢幕、平板與電腦版絕對夠寬 */
+      width: 92% !important;          
+      max-width: 800px !important;    
       border-radius: 12px !important; 
       box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important; 
       margin: 20px 0 !important; 
@@ -47,7 +56,7 @@
     .label { font-size: 10px; color: #606060; font-weight: 500; }
 
     @media (max-width: 600px) {
-      .post-card { width: 95% !important; } /* 手機版撐滿一點 */
+      .post-card { width: 95% !important; } 
       .interaction-group { gap: 25px !important; padding: 10px 15px !important; }
       .btn-wrapper { width: 55px !important; }
       .icon-btn { padding: 6px !important; }
@@ -58,9 +67,9 @@
 
     .backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 100; }
     .bottom-sheet {
-      position: fixed; bottom: 0; left: 0; width: 100%; height: 75dvh; max-height: 75%;
+      position: fixed; bottom: 0; left: 50%; width: 100%; max-width: 800px; height: 75dvh; max-height: 75%;
       background: white; border-top-left-radius: 20px; border-top-right-radius: 20px;
-      z-index: 101; transform: translateY(100%); transition: transform 0.3s ease-out; display: flex; flex-direction: column;
+      z-index: 101; transform: translate(-50%, 100%); transition: transform 0.3s ease-out; display: flex; flex-direction: column;
     }
     .sheet-handle { width: 40px; height: 5px; background: #e0e0e0; border-radius: 10px; margin: 10px auto; flex-shrink: 0; }
     .sheet-header { padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; font-weight: bold; flex-shrink: 0; }
@@ -74,18 +83,33 @@
     .action-btn { color: #0095f6; border:none; background:none; font-weight:bold; cursor:pointer; opacity: 0.5; font-size: 14px; }
     .action-btn.active { opacity: 1; }
     
-    .sheet-open-comment #comment-sheet, .sheet-open-post #post-sheet { transform: translateY(0); }
+    /* 彈出視窗置中修正 */
+    .sheet-open-comment #comment-sheet { transform: translate(-50%, 0); }
+    .sheet-open-post #post-sheet { transform: translate(-50%, 0); }
     .sheet-open-comment #comment-backdrop, .sheet-open-post #post-backdrop { display: block; }
     
-    #load-more { padding: 30px; color: #888; font-size: 14px; display: none; }
+    #load-more { padding: 30px; color: #888; font-size: 14px; display: none; text-align: center; width: 100%; }
     
+    /* 💡 優化底部導覽列：在大螢幕上也能完美置中並融入背景 */
     .bottom-nav {
-      position: fixed; bottom: 0; left: 0; width: 100%; background: white;
-      box-shadow: 0 -1px 5px rgba(0,0,0,0.05); display: flex; justify-content: center;
-      align-items: center; padding: 10px 0; z-index: 90;
+      position: fixed; bottom: 0; left: 0; width: 100%; 
+      display: flex; justify-content: center; align-items: center; 
+      padding: 15px 0; z-index: 90; pointer-events: none;
     }
-    .nav-btn { background: none; border: none; cursor: pointer; padding: 10px 20px; display: flex; align-items: center; justify-content: center; }
-    .nav-icon { width: 28px; height: 28px; fill: none; stroke: #111; stroke-width: 2; }
+    .nav-btn { 
+      background: rgba(255, 255, 255, 0.9); 
+      border: 1px solid rgba(0,0,0,0.08); 
+      cursor: pointer; padding: 12px 28px; 
+      display: flex; align-items: center; justify-content: center; 
+      border-radius: 30px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      pointer-events: auto;
+      transition: transform 0.2s;
+    }
+    .nav-btn:active { transform: scale(0.95); }
+    .nav-icon { width: 26px; height: 26px; fill: none; stroke: #111; stroke-width: 2.5; }
     .empty-tips { color: #999; margin-top: 100px; text-align: center; font-size: 15px; line-height: 1.6; }
   </style>
 </head>
