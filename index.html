@@ -171,15 +171,13 @@
         await fetchPosts();
         await fetchAllComments();
 
-        // 🌟 優化即時廣播頻道：避免按讚導致畫面發抖 🌟
         supabaseClient.channel('any-channel-name')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, async (payload) => {
-            // 只有當別人「新增貼文」時，才觸發重整首頁
+            // 收到新貼文時，重新拉取雲端資料並強制倒序排列置頂
             await fetchPosts();
             renderFeed();
           })
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, (payload) => {
-            // 當貼文被點讚修改時，只偷偷更新後台變數，不重新繪製整張卡片，防止發抖
             const updatedPost = payload.new;
             const target = customPosts.find(p => p.id === updatedPost.id);
             if (target) {
@@ -187,7 +185,6 @@
               target.dislikes = updatedPost.dislikes;
               saveToLocalBackup();
               
-              // 精準更新畫面上那顆按鈕的數字，絕不重刷整張卡片
               const card = document.querySelector(`[data-post-id="${updatedPost.id}"]`);
               if (card) {
                 card.querySelector('.heart-count').innerText = updatedPost.likes || 0;
@@ -219,7 +216,8 @@
 
   async function fetchPosts() {
     if (!isOnline) return;
-    const { data, error } = await supabaseClient.from('posts').select('*');
+    // 透過 created_at 欄位或在前端倒序，確保最新發布在陣列最前端
+    const { data, error } = await supabaseClient.from('posts').select('*').order('created_at', { ascending: true });
     if (!error && data) {
       customPosts = data.reverse();
       saveToLocalBackup();
@@ -342,7 +340,6 @@
     postData.dislikes = currentDislikes;
     saveToLocalBackup();
     
-    // 立即就地更新畫面的數字，絕不重繪整張卡片
     card.querySelector('.heart-count').innerText = currentLikes;
     card.querySelector('.dislike-count').innerText = currentDislikes;
     
@@ -461,11 +458,10 @@
 
     customPosts.unshift(newPostData);
     saveToLocalBackup();
+    renderFeed(); // 本地發文立即更新
 
     if (isOnline) {
       await supabaseClient.from('posts').insert([newPostData]);
-    } else {
-      renderFeed();
     }
 
     closePostSheet();
