@@ -96,14 +96,32 @@
     .action-btn { color: #0095f6; border:none; background:none; font-weight:bold; cursor:pointer; opacity: 0.5; font-size: 14px; }
     .action-btn.active { opacity: 1; }
     
+    /* 💡 核心優化：透明隱形點擊法，解決所有手機端的取消死鎖問題 */
     .upload-zone { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+    
+    .native-click-wrapper {
+      position: relative;
+      display: inline-block;
+      width: fit-content;
+      overflow: hidden;
+    }
     .file-input-label {
       display: inline-flex; align-items: center; gap: 5px; color: #0095f6; 
-      font-size: 14px; font-weight: bold; cursor: pointer; width: fit-content;
+      font-size: 14px; font-weight: bold; width: fit-content;
+      padding: 5px 0;
     }
+    /* 讓真正的 input 變透明並疊在最上面，欺騙手機系統這是 100% 的原生點擊 */
+    .real-native-input {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      font-size: 100px; /* 確保涵蓋整個點擊區域 */
+    }
+
     .image-preview-container { position: relative; display: none; width: 100px; height: 100px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
     .image-preview { width: 100%; height: 100%; object-fit: cover; }
-    .remove-img-btn { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .remove-img-btn { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5; }
 
     .sheet-open-comment #comment-sheet { transform: translate(-50%, 0); }
     .sheet-open-post #post-sheet { transform: translate(-50%, 0); }
@@ -167,13 +185,13 @@
   <div class="sheet-body" style="padding-top: 5px;">
     <textarea id="post-input" class="post-textarea" placeholder="在這裡輸入內容..." oninput="checkPostInput()"></textarea>
     
-    <div class="upload-zone" id="upload-zone-wrapper">
-      <div class="file-input-label" onclick="triggerAndroidFileInput()">
-        <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        加入圖片
-      </div>
-      <div id="dynamic-input-container">
-        <input type="file" id="post-file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" onchange="previewPostImage(this)">
+    <div class="upload-zone">
+      <div class="native-click-wrapper">
+        <div class="file-input-label">
+          <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          加入圖片
+        </div>
+        <input type="file" id="post-file" class="real-native-input" accept="image/jpeg,image/png,image/gif,image/webp" onchange="previewPostImage(this)">
       </div>
       
       <div id="preview-container" class="image-preview-container">
@@ -224,31 +242,6 @@
 
   function generateUniqueId() {
     return 'post-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-  }
-
-  // 💡 終極對策：每按一次「加入圖片」，就當場銷毀舊的、塞一個全新的 Input 欄位，徹底洗掉安卓的死鎖記憶
-  function triggerAndroidFileInput() {
-    const container = document.getElementById('dynamic-input-container');
-    
-    // 1. 銷毀舊的
-    container.innerHTML = '';
-    
-    // 2. 注入全新的 HTML 節點
-    const newInput = document.createElement('input');
-    newInput.type = 'file';
-    newInput.id = 'post-file';
-    newInput.accept = 'image/jpeg,image/png,image/gif,image/webp';
-    newInput.style.display = 'none';
-    
-    // 3. 重新綁定事件
-    newInput.onchange = function() {
-      previewPostImage(this);
-    };
-    
-    container.appendChild(newInput);
-    
-    // 4. 強制喚醒相簿
-    newInput.click();
   }
 
   function previewPostImage(input) {
