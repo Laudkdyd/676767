@@ -239,7 +239,7 @@
     return post;
   }
 
-  function handleReaction(clickedBtn, type) {
+function handleReaction(clickedBtn, type) {
     const card = clickedBtn.closest('.post-card');
     if (card.getAttribute('data-dummy') === 'true') return;
 
@@ -247,26 +247,44 @@
     const postData = customPosts.find(p => p.id === postId);
     if (!postData) return;
 
+    // 1. 抓取目前資料庫的最新數字
     let currentLikes = postData.likes || 0;
+    let currentDislikes = postData.dislikes || 0;
+
+    // 2. 初始化本機狀態
     if (!localReactions[postId]) {
       localReactions[postId] = { isHeartActive: false, isDislikeActive: false };
     }
     const myStatus = localReactions[postId];
 
+    // 3. 核心邏輯：隨時可按，但兩者互斥
     if (type === 'heart') {
       if (myStatus.isHeartActive) {
+        // 原本點了愛心，再點一次就收回
         currentLikes = Math.max(0, currentLikes - 1);
         myStatus.isHeartActive = false;
       } else {
+        // 原本沒點愛心，現在點亮
         currentLikes += 1;
         myStatus.isHeartActive = true;
-        myStatus.isDislikeActive = false;
+        
+        // 【防架空】如果原本有點不喜歡，要把不喜歡收回（扣 1）
+        if (myStatus.isDislikeActive) {
+          currentDislikes = Math.max(0, currentDislikes - 1);
+          myStatus.isDislikeActive = false;
+        }
       }
     } else if (type === 'dislike') {
       if (myStatus.isDislikeActive) {
+        // 原本點了不喜歡，再點一次就收回
+        currentDislikes = Math.max(0, currentDislikes - 1);
         myStatus.isDislikeActive = false;
       } else {
+        // 原本沒點不喜歡，現在點亮（不需要管愛心有沒有點，這下完全解鎖了！）
+        currentDislikes += 1;
         myStatus.isDislikeActive = true;
+        
+        // 【防架空】如果原本有點愛心，要把愛心收回（扣 1）
         if (myStatus.isHeartActive) {
           currentLikes = Math.max(0, currentLikes - 1);
           myStatus.isHeartActive = false;
@@ -274,8 +292,12 @@
       }
     }
 
+    // 4. 同步更新到本機與雲端 Firebase
     saveLocalReactions();
-    database.ref('posts/' + postId).update({ likes: currentLikes });
+    database.ref('posts/' + postId).update({ 
+      likes: currentLikes,
+      dislikes: currentDislikes 
+    });
   }
 
   function openComment(btn) {
