@@ -172,10 +172,24 @@
         await fetchAllComments();
 
         supabaseClient.channel('any-channel-name')
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, async (payload) => {
-            // 收到新貼文時，重新拉取雲端資料並強制倒序排列置頂
-            await fetchPosts();
-            renderFeed();
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
+            const newPost = payload.new;
+            // 檢查這篇是不是別人發的（避免自己發的重複塞入）
+            const exists = customPosts.some(p => p.id === newPost.id);
+            if (!exists) {
+              customPosts.unshift(newPost);
+              saveToLocalBackup();
+              
+              // 🌟 終極流暢：直接把新 DOM 節點加到 Feed 最上方，拒絕重新繪製整頁，防止發抖
+              const feed = document.getElementById('feed');
+              const emptyTips = feed.querySelector('.empty-tips');
+              if (emptyTips) emptyTips.remove();
+              
+              const postDOM = createPostDOM(newPost);
+              feed.insertBefore(postDOM, feed.firstChild);
+              
+              document.getElementById('load-more').style.display = 'block';
+            }
           })
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, (payload) => {
             const updatedPost = payload.new;
@@ -216,7 +230,6 @@
 
   async function fetchPosts() {
     if (!isOnline) return;
-    // 透過 created_at 欄位或在前端倒序，確保最新發布在陣列最前端
     const { data, error } = await supabaseClient.from('posts').select('*').order('created_at', { ascending: true });
     if (!error && data) {
       customPosts = data.reverse();
@@ -458,7 +471,13 @@
 
     customPosts.unshift(newPostData);
     saveToLocalBackup();
-    renderFeed(); // 本地發文立即更新
+    
+    // 本地發文也採用精準插入，絕不重整，防止發抖
+    const feed = document.getElementById('feed');
+    const emptyTips = feed.querySelector('.empty-tips');
+    if (emptyTips) emptyTips.remove();
+    feed.insertBefore(createPostDOM(newPostData), feed.firstChild);
+    document.getElementById('load-more').style.display = 'block';
 
     if (isOnline) {
       await supabaseClient.from('posts').insert([newPostData]);
