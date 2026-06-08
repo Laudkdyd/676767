@@ -83,6 +83,7 @@
       position: fixed; bottom: 0; left: 50%; width: 100%; max-width: 620px; height: 75dvh; max-height: 75%;
       background: white; border-top-left-radius: 20px; border-top-right-radius: 20px;
       z-index: 101; transform: translate(-50%, 100%); transition: transform 0.3s ease-out; display: flex; flex-direction: column;
+      will-change: transform; /* 硬體加速 */
     }
     .sheet-handle { width: 40px; height: 5px; background: #e0e0e0; border-radius: 10px; margin: 10px auto; flex-shrink: 0; }
     .sheet-header { padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; font-weight: bold; flex-shrink: 0; }
@@ -113,7 +114,6 @@
     }
     .file-input-label:active { background: #e0f0ff; }
 
-    /* 貼上圖片欄位樣式 */
     .paste-input-container {
       width: 100%;
       box-sizing: border-box;
@@ -240,7 +240,8 @@
 <script>
   let currentActivePost = null;
   let isOnline = false; 
-  let selectedImageBase64 = ""; 
+  let selectedImageSource = ""; // 存放圖片網址或 Blob URL
+  let mySubmittedPostIds = new Set(); // 記錄本機發布的 ID，防 Realtime 重複渲染
   
   const SUPABASE_URL = "https://diquelyhlucvufoqpxkh.supabase.co"; 
   const SUPABASE_ANON_KEY = "sb_publishable_GJvHju2fS7NO598COPpJyg_8zHxbTU5";
@@ -249,7 +250,7 @@
   try {
     supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   } catch(e) {
-    console.error(e);
+    console.error("Supabase 載入錯誤:", e);
   }
 
   let customPosts = JSON.parse(localStorage.getItem('kfsh_posts')) || [];
@@ -287,38 +288,41 @@
     }, 60);
   }
 
-  // 處理直接剪貼簿「貼上圖片」
+  // 1. 【優化點】剪貼簿貼上優化：小圖用 Blob 加速，避免大圖卡死
   function handleImagePaste(e) {
     const items = (e.clipboardData || window.clipboardData).items;
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf("image") !== -1) {
         const blob = items[i].getAsFile();
-        const reader = new FileReader();
-        reader.onload = function(event) {
-          selectedImageBase64 = event.target.result;
-          document.getElementById('img-preview').src = selectedImageBase64;
-          document.getElementById('preview-container').style.display = 'block';
-          document.getElementById('paste-box').value = "✅ 已成功貼上圖片！";
-          checkPostInput();
-        };
-        reader.readAsDataURL(blob);
+        
+        // 釋放舊記憶體指標
+        if(selectedImageSource.startsWith('blob:')) {
+          URL.revokeObjectURL(selectedImageSource);
+        }
+        
+        // 使用 createObjectURL 代替 FileReader 讀取 Base64
+        selectedImageSource = URL.createObjectURL(blob);
+        document.getElementById('img-preview').src = selectedImageSource;
+        document.getElementById('preview-container').style.display = 'block';
+        document.getElementById('paste-box').value = "✅ 已成功貼上圖片！";
+        checkPostInput();
         e.preventDefault();
         return;
       }
     }
   }
 
-  // 處理輸入「圖片網址」
   function handleUrlInput(input) {
     const value = input.value.trim();
     if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:image')) {
-      selectedImageBase64 = value;
+      selectedImageSource = value;
       document.getElementById('img-preview').src = value;
       document.getElementById('preview-container').style.display = 'block';
       checkPostInput();
     }
   }
 
+  // 2. 【優化點】相簿選取優化：改用極速不占記憶體的 Blob URL
   function previewPostImage(input) {
     const file = input.files[0];
     if (!file) return;
@@ -329,19 +333,24 @@
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      selectedImageBase64 = e.target.result;
-      document.getElementById('img-preview').src = selectedImageBase64;
-      document.getElementById('preview-container').style.display = 'block';
-      checkPostInput(); 
+    // 釋放舊指標防止記憶體洩漏
+    if(selectedImageSource.startsWith('blob:')) {
+      URL.revokeObjectURL(selectedImageSource);
     }
-    reader.readAsDataURL(file);
+
+    // 瞬間建立網址，不需經過慢速的 Base64 轉換
+    selectedImageSource = URL.createObjectURL(file);
+    document.getElementById('img-preview').src = selectedImageSource;
+    document.getElementById('preview-container').style.display = 'block';
+    checkPostInput(); 
   }
 
   function removeSelectedImage(e) {
     if(e) e.preventDefault();
-    selectedImageBase64 = "";
+    if(selectedImageSource.startsWith('blob:')) {
+      URL.revokeObjectURL(selectedImageSource);
+    }
+    selectedImageSource = "";
     const fileInput = document.getElementById('post-file');
     if (fileInput) fileInput.value = ""; 
     document.getElementById('paste-box').value = "";
@@ -360,9 +369,14 @@
         await fetchPosts();
         await fetchAllComments();
 
+        // 即時資料更新監聽
         supabaseClient.channel('any-channel-name')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
             const newPost = payload.new;
+            
+            // 3. 【優化點】防止發布文章時，自己會看到兩篇重複的文章
+            if (mySubmittedPostIds.has(newPost.id)) return;
+
             const exists = customPosts.some(p => p.id === newPost.id);
             if (!exists) {
               customPosts.unshift(newPost);
@@ -447,6 +461,7 @@
     }
   }
 
+  // 4. 【優化點】DOM 圖片渲染優化：加入 loading="lazy" 防止大量圖片滑動時掉幀
   function createPostDOM(postObj) {
     const post = document.createElement('div');
     post.className = 'post-card';
@@ -457,13 +472,12 @@
     const heartClass = status.isHeartActive ? 'heart active' : 'heart';
     const dislikeClass = status.isDislikeActive ? 'dislike active' : 'dislike';
 
-    // 支援 Base64 或一般網址圖片的判斷
-    const hasImage = postObj.bgColor && (postObj.bgColor.startsWith('data:image') || postObj.bgColor.startsWith('http'));
+    const hasImage = postObj.bgColor && (postObj.bgColor.startsWith('data:image') || postObj.bgColor.startsWith('http') || postObj.bgColor.startsWith('blob:'));
 
     let cardBodyHTML = "";
     if (hasImage) {
       cardBodyHTML = `
-        <img class="post-card-img" src="${postObj.bgColor}">
+        <img class="post-card-img" src="${postObj.bgColor}" loading="lazy">
         ${postObj.content ? `<div class="post-card-text-with-img">${escapeHtml(postObj.content)}</div>` : ''}
       `;
     } else {
@@ -578,7 +592,6 @@
     document.body.style.overflow = 'auto';
     document.getElementById('comment-input').value = '';
     checkCommentInput();
-    window.scrollTo(0, window.scrollY); 
   }
 
   function checkCommentInput() {
@@ -640,21 +653,13 @@
     document.body.style.overflow = 'auto';
     document.getElementById('post-input').value = '';
     
-    selectedImageBase64 = "";
-    const fileInput = document.getElementById('post-file');
-    if (fileInput) fileInput.value = ""; 
-    document.getElementById('paste-box').value = "";
-    document.getElementById('img-preview').src = "";
-    document.getElementById('preview-container').style.display = 'none';
-    
-    checkPostInput();
-    window.scrollTo(0, window.scrollY);
+    removeSelectedImage();
   }
 
   function checkPostInput() {
     const input = document.getElementById('post-input');
     const btn = document.getElementById('submit-post-btn');
-    if (input.value.trim().length > 0 || selectedImageBase64 !== "") {
+    if (input.value.trim().length > 0 || selectedImageSource !== "") {
       btn.disabled = false;
       btn.classList.add('active');
     } else {
@@ -667,13 +672,15 @@
     const input = document.getElementById('post-input');
     const content = input.value.trim();
     
-    if (!content && selectedImageBase64 === "") return;
+    if (!content && selectedImageSource === "") return;
 
     const id = generateUniqueId();
+    mySubmittedPostIds.add(id); // 防止重複渲染
+
     let finalBgOrImg = "";
 
-    if (selectedImageBase64 !== "") {
-      finalBgOrImg = selectedImageBase64;
+    if (selectedImageSource !== "") {
+      finalBgOrImg = selectedImageSource;
     } else {
       const randomHue = Math.floor(Math.random() * 360);
       finalBgOrImg = `hsl(${randomHue}, 45%, 95%)`;
@@ -690,20 +697,19 @@
     feed.insertBefore(createPostDOM(newPostData), feed.firstChild);
     document.getElementById('load-more').style.display = 'block';
 
+    closePostSheet();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     if (isOnline) {
-      await supabaseClient.from('posts').insert([newPostData]);
+      try {
+        await supabaseClient.from('posts').insert([newPostData]);
+      } catch (e) {
+        console.error("Supabase 寫入失敗:", e);
+      }
     }
 
     input.value = "";
-    selectedImageBase64 = "";
-    const fileInput = document.getElementById('post-file');
-    if (fileInput) fileInput.value = ""; 
-    document.getElementById('paste-box').value = "";
-    document.getElementById('img-preview').src = "";
-    document.getElementById('preview-container').style.display = 'none';
-
-    closePostSheet();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // 注意：這裡不清除 selectedImageSource，因為 DOM 中的 <img> 還在引用這個 Blob 網址
   }
 
   function escapeHtml(text) {
