@@ -40,48 +40,70 @@
       word-break: break-word;
     }
     
-    /* 1. 縮小底部的工具列空間與按鈕間距 */
+    /* =================================================== */
+    /* 預設樣式（電腦版）：按鈕維持精緻縮小版 */
+    /* =================================================== */
     .interaction-group { 
-      display: flex !important; 
-      gap: 15px !important; 
-      padding: 6px 15px !important; 
+      display: flex; 
+      gap: 15px; 
+      padding: 6px 15px; 
     }
-    /* 2. 將包裝區塊寬度縮小 */
     .btn-wrapper { 
-      display: flex !important; 
-      flex-direction: column !important; 
-      align-items: center !important; 
-      gap: 1px !important; 
-      width: 45px !important; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      gap: 1px; 
+      width: 45px; 
     }
-    /* 3. 縮減按鈕點擊範圍的內距 */
     .icon-btn { 
-      background: none !important; 
-      border: none !important; 
-      cursor: pointer !important; 
-      padding: 4px !important; 
-      transition: 0.2s !important; 
+      background: none; 
+      border: none; 
+      cursor: pointer; 
+      padding: 4px; 
+      transition: 0.2s; 
     }
-    .icon-btn:active { transform: scale(0.9) !important; }
+    .icon-btn:active { transform: scale(0.9); }
     
-    /* 4. 強制將 SVG 愛心/留言/倒讚圖示縮小到 18px (原本是 28px) */
     .icon-svg { 
-      fill: white !important; 
-      stroke: black !important; 
-      stroke-width: 2 !important; 
-      width: 18px !important; 
-      height: 18px !important; 
+      fill: white; 
+      stroke: black; 
+      stroke-width: 2; 
+      width: 18px; 
+      height: 18px; 
     }
     
-    .heart.active .icon-svg { fill: #ff3040 !important; stroke: #ff3040 !important; }
-    .dislike.active .icon-svg { fill: #000 !important; stroke: #000 !important; }
+    .heart.active .icon-svg { fill: #ff3040; stroke: #ff3040; }
+    .dislike.active .icon-svg { fill: #000; stroke: #000; }
     
-    /* 5. 強制將下方的數字與文字標籤縮小到 10px */
     .label { 
-      font-size: 10px !important; 
-      color: #606060 !important; 
-      font-weight: 500 !important; 
+      font-size: 10px; 
+      color: #606060; 
+      font-weight: 500; 
     }
+
+    /* =================================================== */
+    /* RWD 手機版自動優化：當螢幕寬度小於 600px 時自動放大 */
+    /* =================================================== */
+    @media (max-width: 600px) {
+      .interaction-group {
+        gap: 25px !important;       /* 拉開按鈕間距防誤觸 */
+        padding: 10px 15px !important;
+      }
+      .btn-wrapper {
+        width: 55px !important;
+      }
+      .icon-btn {
+        padding: 6px !important;     /* 放大手機上的點擊感應範圍 */
+      }
+      .icon-svg {
+        width: 24px !important;      /* 手機上圖示放大到 24px，方便點擊 */
+        height: 24px !important;
+      }
+      .label {
+        font-size: 12px !important;  /* 手機上文字放大到 12px 方便閱讀 */
+      }
+    }
+    /* =================================================== */
 
     .post-card.disabled-card .icon-btn { cursor: not-allowed; opacity: 0.3; }
     .post-card.disabled-card .icon-btn:active { transform: none; }
