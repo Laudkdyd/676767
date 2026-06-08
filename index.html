@@ -108,6 +108,7 @@
       display: inline-flex; align-items: center; gap: 5px; color: #0095f6; 
       font-size: 14px; font-weight: bold; cursor: pointer; width: fit-content;
       padding: 8px 14px; background: #f0f8ff; border-radius: 20px;
+      user-select: none; -webkit-user-select: none;
     }
     .file-input-label:active { background: #e0f0ff; }
 
@@ -255,22 +256,26 @@
       previewPostImage(this);
     };
 
-    // 防卡死機制：追蹤視窗焦點
-    let hasFocusLeft = false;
-    window.addEventListener('blur', () => {
-      hasFocusLeft = true;
-    }, { once: true });
-
+    // 獲取當前點擊的按鈕元素
+    const labelBtn = e.currentTarget || document.querySelector('.file-input-label');
+    
+    // 【核心大改版：半秒後轉移點擊權，轉為解死鎖鑰匙】
     setTimeout(() => {
-      // 如果 400 毫秒內視窗未曾離開過（表示點擊取消後被系統阻斷、相簿死鎖）
-      if (!hasFocusLeft && (!fileInput.files || fileInput.files.length === 0)) {
-        const currentText = document.getElementById('post-input').value;
-        if (currentText.trim().length > 0) {
-          sessionStorage.setItem('kfsh_pending_text', currentText);
-        }
-        window.location.reload(); // 自動重整網頁解開死結
+      // 如果半秒後，使用者並未成功選中檔案（files為空，說明他按了取消或系統已死鎖）
+      if (!fileInput.files || fileInput.files.length === 0) {
+        // 重寫該按鈕的點擊事件：如果再次點擊，立即保存文字並重整網頁解鎖
+        labelBtn.onclick = function(newEvt) {
+          newEvt.preventDefault();
+          newEvt.stopPropagation();
+          
+          const currentText = document.getElementById('post-input').value;
+          if (currentText.trim().length > 0) {
+            sessionStorage.setItem('kfsh_pending_text', currentText);
+          }
+          window.location.reload(); // 透過刷新頁面徹底逼迫系統釋放 input 權限
+        };
       }
-    }, 400);
+    }, 500);
 
     setTimeout(() => {
       fileInput.click();
@@ -308,12 +313,15 @@
   }
 
   async function init() {
-    // 還原被卡死重整而留下的文字
+    // 檢查是否有因為解鎖重整而留下來的暫存文字，若有則自動還原填入並開啟視窗
     const pendingText = sessionStorage.getItem('kfsh_pending_text');
     if (pendingText) {
       sessionStorage.removeItem('kfsh_pending_text');
       document.getElementById('post-input').value = pendingText;
-      setTimeout(() => { openPostSheet(); }, 500);
+      setTimeout(() => { 
+        openPostSheet(); 
+        checkPostInput();
+      }, 500);
     }
 
     if (supabaseClient) {
@@ -590,6 +598,12 @@
   }
 
   function openPostSheet() {
+    // 每次打開視窗時，重置「加入圖片」按鈕的初始點擊事件
+    const labelBtn = document.querySelector('.file-input-label');
+    if (labelBtn) {
+      labelBtn.onclick = function(e) { openPhotoGallery(e); };
+    }
+
     document.getElementById('main-body').classList.add('sheet-open-post');
     document.body.style.overflow = 'hidden';
     
