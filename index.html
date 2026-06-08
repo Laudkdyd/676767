@@ -36,7 +36,6 @@
       overflow: hidden !important; 
     }
     
-    /* 調整貼文區塊：若有圖片則填滿，若只有文字則維持原本的彩底大字 */
     .post-image { 
       width: 100%; min-height: 100px; height: auto; 
       background-color: #e9ecef; display: block; color: #212529; 
@@ -44,7 +43,7 @@
       box-sizing: border-box; text-align: center; line-height: 1.6; 
       word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;
     }
-    /* 當貼文包含圖片時的樣式 */
+
     .post-card-img {
       width: 100%;
       max-height: 450px;
@@ -56,7 +55,7 @@
       font-size: 16px;
       color: #212529;
       line-height: 1.5;
-      background: #white;
+      background: white;
     }
     
     .interaction-group { display: flex; gap: 15px; padding: 10px 15px; border-top: 1px solid #f0f2f5; }
@@ -97,7 +96,6 @@
     .action-btn { color: #0095f6; border:none; background:none; font-weight:bold; cursor:pointer; opacity: 0.5; font-size: 14px; }
     .action-btn.active { opacity: 1; }
     
-    /* 圖片上傳控制區樣式 */
     .upload-zone { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
     .file-input-label {
       display: inline-flex; align-items: center; gap: 5px; color: #0095f6; 
@@ -174,7 +172,7 @@
         <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         加入圖片
       </label>
-      <input type="file" id="post-file" accept="image/*" style="display:none;" onchange="previewPostImage(this)">
+      <input type="file" id="post-file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" onchange="previewPostImage(this)">
       <div id="preview-container" class="image-preview-container">
         <img id="img-preview" class="image-preview" src="">
         <button class="remove-img-btn" onclick="removeSelectedImage(event)">×</button>
@@ -199,7 +197,7 @@
 <script>
   let currentActivePost = null;
   let isOnline = false; 
-  let selectedImageBase64 = ""; // 儲存選取的圖片 Base64 資料
+  let selectedImageBase64 = ""; 
   
   const SUPABASE_URL = "https://diquelyhlucvufoqpxkh.supabase.co"; 
   const SUPABASE_ANON_KEY = "sb_publishable_GJvHju2fS7NO598COPpJyg_8zHxbTU5";
@@ -225,14 +223,13 @@
     return 'post-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
   }
 
-  // 💡 圖片預覽處理
   function previewPostImage(input) {
     const file = input.files[0];
     if (!file) return;
     
-    // 限制圖片大小在 2MB 以內，避免 Base64 字串過長破壞資料庫傳輸
+    // 💡 整合優化：如果檔案太大，彈出更直覺的手機提示
     if (file.size > 2 * 1024 * 1024) {
-      alert("圖片太大囉！請選擇 2MB 以下的圖片。");
+      alert("手機照片檔案太大了（需小於 2MB）！\n建議可以使用「螢幕截圖」再上傳截圖喔！");
       input.value = "";
       return;
     }
@@ -242,12 +239,11 @@
       selectedImageBase64 = e.target.result;
       document.getElementById('img-preview').src = selectedImageBase64;
       document.getElementById('preview-container').style.display = 'block';
-      checkPostInput(); // 有圖片時也需要更新按鈕狀態
+      checkPostInput(); 
     }
     reader.readAsDataURL(file);
   }
 
-  // 💡 移除選取的圖片
   function removeSelectedImage(e) {
     if(e) e.preventDefault();
     selectedImageBase64 = "";
@@ -361,7 +357,6 @@
     }
   }
 
-  // 💡 渲染貼文：判斷是否有圖片，呈現不同佈局
   function createPostDOM(postObj) {
     const post = document.createElement('div');
     post.className = 'post-card';
@@ -372,8 +367,6 @@
     const heartClass = status.isHeartActive ? 'heart active' : 'heart';
     const dislikeClass = status.isDislikeActive ? 'dislike active' : 'dislike';
 
-    // 判斷欄位中是否包含圖片的 Base64 標記 (我們擴充 bgColor 欄位或另外儲存，此處直接複用其架構存於圖片欄位，或在 bgColor 存字串)
-    // 為了不更動 Supabase 資料表欄位結構，我們把圖片塞入 `bgColor` 欄位（因為它是 text 型態可以存超長字串！）
     const hasImage = postObj.bgColor && postObj.bgColor.startsWith('data:image');
 
     let cardBodyHTML = "";
@@ -555,7 +548,7 @@
     document.getElementById('main-body').classList.remove('sheet-open-post');
     document.body.style.overflow = 'auto';
     document.getElementById('post-input').value = '';
-    removeSelectedImage(); // 關閉時清空圖片選取
+    removeSelectedImage(); 
     checkPostInput();
     window.scrollTo(0, window.scrollY);
   }
@@ -563,7 +556,6 @@
   function checkPostInput() {
     const input = document.getElementById('post-input');
     const btn = document.getElementById('submit-post-btn');
-    // 有輸入文字 或者 有選取圖片，發布按鈕就可以點擊
     if (input.value.trim().length > 0 || selectedImageBase64 !== "") {
       btn.disabled = false;
       btn.classList.add('active');
@@ -577,17 +569,14 @@
     const input = document.getElementById('post-input');
     const content = input.value.trim();
     
-    // 如果沒字也沒圖，阻擋發布
     if (!content && selectedImageBase64 === "") return;
 
     const id = generateUniqueId();
     let finalBgOrImg = "";
 
     if (selectedImageBase64 !== "") {
-      // 💡 如果有上傳圖片，就把 Base64 字串直接塞進儲存背景色欄位（因為那是純文字欄位，可以直接挪用）
       finalBgOrImg = selectedImageBase64;
     } else {
-      // 如果沒圖片，跟以前一樣產生純文字用的隨機色彩底色
       const randomHue = Math.floor(Math.random() * 360);
       finalBgOrImg = `hsl(${randomHue}, 45%, 95%)`;
     }
