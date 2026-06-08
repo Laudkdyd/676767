@@ -16,6 +16,13 @@
       font-weight: bold; position: sticky; top: 0; z-index: 10; 
       box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
     }
+    .db-status {
+      width: 100%; max-width: 500px; padding: 6px; text-align: center;
+      font-size: 11px; font-weight: bold; margin-top: 5px; border-radius: 6px;
+    }
+    .db-online { background-color: #d4edda; color: #155724; display: none; }
+    .db-offline { background-color: #fff3cd; color: #856404; }
+    
     .post-card { 
       background: white; width: 100%; max-width: 500px; 
       border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
@@ -23,21 +30,11 @@
       animation: fadeIn 0.3s;
     }
     .post-image { 
-      width: 100%; 
-      min-height: 150px; 
-      height: auto; 
-      background-color: #e9ecef; 
-      display: block; 
-      color: #212529; 
-      font-size: 20px; 
-      font-weight: 500; 
-      padding: 50px 30px; 
-      box-sizing: border-box; 
-      text-align: center;
-      line-height: 1.6; 
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      word-break: break-word;
+      width: 100%; min-height: 150px; height: auto; 
+      background-color: #e9ecef; display: block; color: #212529; 
+      font-size: 20px; font-weight: 500; padding: 50px 30px; 
+      box-sizing: border-box; text-align: center; line-height: 1.6; 
+      word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;
     }
     
     .interaction-group { display: flex; gap: 15px; padding: 6px 15px; }
@@ -58,10 +55,6 @@
       .label { font-size: 12px !important; }
       .comment-input, .post-textarea { font-size: 16px !important; }
     }
-
-    .post-card.disabled-card .icon-btn { cursor: not-allowed; opacity: 0.3; }
-    .post-card.disabled-card .icon-btn:active { transform: none; }
-    .post-card.disabled-card .label { opacity: 0.3; }
 
     .backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 100; }
     .bottom-sheet {
@@ -100,6 +93,8 @@
 <body id="main-body">
 
 <div class="header">靠杯附中</div>
+<div id="status-indicator" class="db-status db-offline">正在連線至大容量資料庫...</div>
+
 <div id="feed"></div>
 <div id="load-more">滑動載入更多...</div>
 
@@ -147,18 +142,27 @@
 
 <script>
   let currentActivePost = null;
+  let isOnline = false; // 是否成功與 Supabase 連線
   
-  // 已經填入你的專屬 Supabase 資訊
+  // 填入你的正確資訊
   const SUPABASE_URL = "https://diquelyhlucvufoqpxkh.supabase.co"; 
   const SUPABASE_ANON_KEY = "sb_publishable_GJvHju2fS7NO598COPpJyg_8zHxbTU5";
   
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let supabaseClient = null;
+  try {
+    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch(e) {
+    console.error("Supabase 初始化失敗", e);
+  }
 
-  let customPosts = [];
-  let commentStore = {}; 
+  // 備用 LocalStorage 資料庫儲存
+  let customPosts = JSON.parse(localStorage.getItem('kfsh_posts')) || [];
+  let commentStore = JSON.parse(localStorage.getItem('kfsh_comments')) || {};
   let localReactions = JSON.parse(localStorage.getItem('threads_local_reactions')) || {};
 
-  function saveLocalReactions() {
+  function saveToLocalBackup() {
+    localStorage.setItem('kfsh_posts', JSON.stringify(customPosts));
+    localStorage.setItem('kfsh_comments', JSON.stringify(commentStore));
     localStorage.setItem('threads_local_reactions', JSON.stringify(localReactions));
   }
 
@@ -168,59 +172,81 @@
 
   // 初始化與即時監聽資料
   async function init() {
-    await fetchPosts();
-    await fetchAllComments();
-    renderFeed();
-
-    // 監聽 posts 資料表變動 (新增/修改)
-    supabase.channel('public:posts')
-      .on('postgres_changes', { event: '*', filter: 'schema=public&table=posts' }, async () => {
-        await fetchPosts();
-        renderFeed();
-      }).subscribe();
-
-    // 監聽 comments 資料表變動
-    supabase.channel('public:comments')
-      .on('postgres_changes', { event: 'INSERT', filter: 'schema=public&table=comments' }, async (payload) => {
-        const newComment = payload.new;
-        if (!commentStore[newComment.post_id]) commentStore[newComment.post_id] = [];
-        commentStore[newComment.post_id].push(newComment.content);
+    const indicator = document.getElementById('status-indicator');
+    
+    if (supabaseClient) {
+      // 測試讀取以檢查 RLS 狀態
+      const { data, error } = await supabaseClient.from('posts').select('*').limit(1);
+      
+      if (error) {
+        console.error("Supabase 讀取錯誤 (可能 RLS 未關閉):", error.message);
+        indicator.className = "db-status db-offline";
+        indicator.innerText = "⚠️ 資料庫拒絕連線 (請至後台關閉 posts 與 comments 表的 RLS 限制) 。目前為單機防護模式。";
+        isOnline = false;
+      } else {
+        indicator.className = "db-status db-online";
+        indicator.innerText = "🟢 已成功連線至大容量雲端資料庫";
+        indicator.style.display = "block";
+        isOnline = true;
         
-        // 更新當前打開的留言視窗
-        if (currentActivePost && currentActivePost.getAttribute('data-post-id') === newComment.post_id) {
-          renderComments(newComment.post_id);
-        }
-        // 更新首頁上的計數器
-        const card = document.querySelector(`[data-post-id="${newComment.post_id}"]`);
-        if (card) {
-          card.querySelector('.comment-count').innerText = commentStore[newComment.post_id].length;
-        }
-      }).subscribe();
-  }
+        await fetchPosts();
+        await fetchAllComments();
 
-  // 取得所有貼文
-  async function fetchPosts() {
-    const { data, error } = await supabase
-      .from('posts')
-      .select('*');
-    
-    if (error) {
-      console.error(error);
-      return;
+        // 監聽 posts 變動
+        supabaseClient.channel('public:posts')
+          .on('postgres_changes', { event: '*', filter: 'schema=public&table=posts' }, async () => {
+            await fetchPosts();
+            renderFeed();
+          }).subscribe();
+
+        // 監聽 comments 變動
+        supabaseClient.channel('public:comments')
+          .on('postgres_changes', { event: 'INSERT', filter: 'schema=public&table=comments' }, async (payload) => {
+            const newComment = payload.new;
+            if (!commentStore[newComment.post_id]) commentStore[newComment.post_id] = [];
+            if (!commentStore[newComment.post_id].includes(newComment.content)) {
+              commentStore[newComment.post_id].push(newComment.content);
+            }
+            saveToLocalBackup();
+            
+            if (currentActivePost && currentActivePost.getAttribute('data-post-id') === newComment.post_id) {
+              renderComments(newComment.post_id);
+            }
+            const card = document.querySelector(`[data-post-id="${newComment.post_id}"]`);
+            if (card) {
+              card.querySelector('.comment-count').innerText = commentStore[newComment.post_id].length;
+            }
+          }).subscribe();
+      }
+    } else {
+      indicator.innerText = "❌ 網址或金鑰錯誤，進入單機安全模式。";
     }
-    customPosts = data ? data.reverse() : [];
+
+    renderFeed();
   }
 
-  // 取得所有留言並分類
+  // 從網路取得所有貼文
+  async function fetchPosts() {
+    if (!isOnline) return;
+    const { data, error } = await supabaseClient.from('posts').select('*');
+    if (!error && data) {
+      customPosts = data.reverse();
+      saveToLocalBackup();
+    }
+  }
+
+  // 從網路取得所有留言
   async function fetchAllComments() {
-    const { data, error } = await supabase.from('comments').select('*');
-    if (error) return;
-    
-    commentStore = {};
-    data.forEach(c => {
-      if (!commentStore[c.post_id]) commentStore[c.post_id] = [];
-      commentStore[c.post_id].push(c.content);
-    });
+    if (!isOnline) return;
+    const { data, error } = await supabaseClient.from('comments').select('*');
+    if (!error && data) {
+      commentStore = {};
+      data.forEach(c => {
+        if (!commentStore[c.post_id]) commentStore[c.post_id] = [];
+        commentStore[c.post_id].push(c.content);
+      });
+      saveToLocalBackup();
+    }
   }
 
   // 渲染首頁
@@ -317,13 +343,19 @@
       }
     }
 
-    saveLocalReactions();
+    // 同步到變數與快取
+    postData.likes = currentLikes;
+    postData.dislikes = currentDislikes;
+    saveToLocalBackup();
+    renderFeed();
     
-    // 更新 Supabase 資料
-    await supabase.from('posts').update({ 
-      likes: currentLikes,
-      dislikes: currentDislikes 
-    }).eq('id', postId);
+    // 如果在線，同步到雲端 Supabase
+    if (isOnline) {
+      await supabaseClient.from('posts').update({ 
+        likes: currentLikes,
+        dislikes: currentDislikes 
+      }).eq('id', postId);
+    }
   }
 
   function openComment(btn) {
@@ -365,8 +397,17 @@
     const text = input.value.trim();
     if (!text) return;
 
-    // 新增留言到 Supabase
-    await supabase.from('comments').insert([{ post_id: postId, content: text }]);
+    if (!commentStore[postId]) commentStore[postId] = [];
+    commentStore[postId].push(text);
+    saveToLocalBackup();
+
+    // 如果在線，新增到雲端 Supabase
+    if (isOnline) {
+      await supabaseClient.from('comments').insert([{ post_id: postId, content: text }]);
+    } else {
+      renderComments(postId);
+      renderFeed();
+    }
 
     input.value = '';
     checkCommentInput();
@@ -423,8 +464,16 @@
     const randomBg = `hsl(${randomHue}, 45%, 95%)`;
     const newPostData = { id: id, content: content, bgColor: randomBg, likes: 0, dislikes: 0 };
 
-    // 新增貼文到 Supabase
-    await supabase.from('posts').insert([newPostData]);
+    // 優先推入本地陣列渲染
+    customPosts.unshift(newPostData);
+    saveToLocalBackup();
+
+    // 如果在線，推送到雲端 Supabase
+    if (isOnline) {
+      await supabaseClient.from('posts').insert([newPostData]);
+    } else {
+      renderFeed();
+    }
 
     closePostSheet();
     window.scrollTo({ top: 0, behavior: 'smooth' });
