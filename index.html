@@ -24,24 +24,27 @@
     }
     .post-image { 
       width: 100%; 
-      /* 調整：移除 260px 固定高度，改為彈性高度並設定最小保底高度 */
-      min-height: 180px; 
+      min-height: 150px; 
       height: auto; 
       background-color: #e9ecef; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
+      
+      /* 修正：改回 block 排版，讓文字能正常換行，不再橫向硬擠成一直行 */
+      display: block; 
+      
       color: #212529; 
       font-size: 20px; 
       font-weight: 500; 
-      /* 調整：增加上下內距，讓字多延伸時維持舒適的留白 */
-      padding: 40px 25px; 
+      
+      /* 調整：透過適當的上下左右內距，讓字卡在字多時也能保持舒適的留白空間 */
+      padding: 50px 30px; 
       box-sizing: border-box; 
       text-align: center;
       line-height: 1.6; 
-      /* 調整：優化斷行規則，長網址或中英文混雜時不易爆版 */
-      overflow-wrap: break-word; 
-      word-break: normal; 
+      
+      /* 調整：強固斷行機制，避免長英文或特殊網址衝出框架外 */
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     .interaction-group { display: flex; gap: 30px; padding: 10px 15px; }
     .btn-wrapper { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 60px; }
