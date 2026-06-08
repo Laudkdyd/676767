@@ -17,10 +17,13 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
     }
     .post-card { 
-      background: white; width: 100%; max-width: 500px; 
-      border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
-      margin: 20px 0; overflow: hidden; 
-      /* 💡 移除原本的 animation: fadeIn 0.3s; 防止任何卡片插入時產生的閃爍與跳動 */
+      background: white; 
+      width: 90%;             /* 💡 在小螢幕時左右保留點間距 */
+      max-width: 700px;       /* 💡 將原本的 500px 調寬至 700px（你可以自由改成 600px 或 800px） */
+      border-radius: 12px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+      margin: 20px 0; 
+      overflow: hidden; 
     }
     .post-image { 
       width: 100%; min-height: 150px; height: auto; 
