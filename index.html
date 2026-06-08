@@ -171,14 +171,13 @@
         await fetchPosts();
         await fetchAllComments();
 
-        supabaseClient.channel('public:posts')
-          .on('postgres_changes', { event: '*', filter: 'schema=public&table=posts' }, async () => {
+        // 🌟 強制啟動即時同步廣播頻道 🌟
+        supabaseClient.channel('any-channel-name')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, async (payload) => {
             await fetchPosts();
             renderFeed();
-          }).subscribe();
-
-        supabaseClient.channel('public:comments')
-          .on('postgres_changes', { event: 'INSERT', filter: 'schema=public&table=comments' }, async (payload) => {
+          })
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, async (payload) => {
             const newComment = payload.new;
             if (!commentStore[newComment.post_id]) commentStore[newComment.post_id] = [];
             if (!commentStore[newComment.post_id].includes(newComment.content)) {
@@ -193,7 +192,10 @@
             if (card) {
               card.querySelector('.comment-count').innerText = commentStore[newComment.post_id].length;
             }
-          }).subscribe();
+          })
+          .subscribe((status) => {
+            console.log("Realtime status:", status);
+          });
       }
     }
     renderFeed();
