@@ -100,8 +100,9 @@
     
     .upload-buttons-container {
       display: flex;
-      align-items: center;
-      gap: 12px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
     }
 
     .file-input-label {
@@ -112,7 +113,28 @@
     }
     .file-input-label:active { background: #e0f0ff; }
 
-    .image-preview-container { position: relative; display: none; width: 100px; height: 100px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
+    /* 貼上圖片欄位樣式 */
+    .paste-input-container {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .paste-box {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px dashed #ccc;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: #666;
+      background: #fafafa;
+      outline: none;
+    }
+    .paste-box:focus {
+      border-color: #0095f6;
+      background: #fff;
+    }
+
+    .image-preview-container { position: relative; display: none; width: 100px; height: 100px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; margin-top: 5px; }
     .image-preview { width: 100%; height: 100%; object-fit: cover; }
     .remove-img-btn { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
@@ -183,6 +205,10 @@
         <div class="file-input-label" onclick="openPhotoGallery(event)">
           <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           加入圖片
+        </div>
+        
+        <div class="paste-input-container">
+          <input type="text" id="paste-box" class="paste-box" placeholder="相簿卡死？點此長按「貼上圖片」或圖片網址" onpaste="handleImagePaste(event)" oninput="handleUrlInput(this)">
         </div>
       </div>
       
@@ -256,30 +282,41 @@
       previewPostImage(this);
     };
 
-    // 獲取當前點擊的按鈕元素
-    const labelBtn = e.currentTarget || document.querySelector('.file-input-label');
-    
-    // 【核心大改版：半秒後轉移點擊權，轉為解死鎖鑰匙】
-    setTimeout(() => {
-      // 如果半秒後，使用者並未成功選中檔案（files為空，說明他按了取消或系統已死鎖）
-      if (!fileInput.files || fileInput.files.length === 0) {
-        // 重寫該按鈕的點擊事件：如果再次點擊，立即保存文字並重整網頁解鎖
-        labelBtn.onclick = function(newEvt) {
-          newEvt.preventDefault();
-          newEvt.stopPropagation();
-          
-          const currentText = document.getElementById('post-input').value;
-          if (currentText.trim().length > 0) {
-            sessionStorage.setItem('kfsh_pending_text', currentText);
-          }
-          window.location.reload(); // 透過刷新頁面徹底逼迫系統釋放 input 權限
-        };
-      }
-    }, 500);
-
     setTimeout(() => {
       fileInput.click();
     }, 60);
+  }
+
+  // 處理直接剪貼簿「貼上圖片」
+  function handleImagePaste(e) {
+    const items = (e.clipboardData || window.clipboardData).items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const blob = items[i].getAsFile();
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          selectedImageBase64 = event.target.result;
+          document.getElementById('img-preview').src = selectedImageBase64;
+          document.getElementById('preview-container').style.display = 'block';
+          document.getElementById('paste-box').value = "✅ 已成功貼上圖片！";
+          checkPostInput();
+        };
+        reader.readAsDataURL(blob);
+        e.preventDefault();
+        return;
+      }
+    }
+  }
+
+  // 處理輸入「圖片網址」
+  function handleUrlInput(input) {
+    const value = input.value.trim();
+    if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:image')) {
+      selectedImageBase64 = value;
+      document.getElementById('img-preview').src = value;
+      document.getElementById('preview-container').style.display = 'block';
+      checkPostInput();
+    }
   }
 
   function previewPostImage(input) {
@@ -307,23 +344,13 @@
     selectedImageBase64 = "";
     const fileInput = document.getElementById('post-file');
     if (fileInput) fileInput.value = ""; 
+    document.getElementById('paste-box').value = "";
     document.getElementById('img-preview').src = "";
     document.getElementById('preview-container').style.display = 'none';
     checkPostInput();
   }
 
   async function init() {
-    // 檢查是否有因為解鎖重整而留下來的暫存文字，若有則自動還原填入並開啟視窗
-    const pendingText = sessionStorage.getItem('kfsh_pending_text');
-    if (pendingText) {
-      sessionStorage.removeItem('kfsh_pending_text');
-      document.getElementById('post-input').value = pendingText;
-      setTimeout(() => { 
-        openPostSheet(); 
-        checkPostInput();
-      }, 500);
-    }
-
     if (supabaseClient) {
       const { data, error } = await supabaseClient.from('posts').select('*').limit(1);
       if (error) {
@@ -430,7 +457,8 @@
     const heartClass = status.isHeartActive ? 'heart active' : 'heart';
     const dislikeClass = status.isDislikeActive ? 'dislike active' : 'dislike';
 
-    const hasImage = postObj.bgColor && postObj.bgColor.startsWith('data:image');
+    // 支援 Base64 或一般網址圖片的判斷
+    const hasImage = postObj.bgColor && (postObj.bgColor.startsWith('data:image') || postObj.bgColor.startsWith('http'));
 
     let cardBodyHTML = "";
     if (hasImage) {
@@ -598,12 +626,6 @@
   }
 
   function openPostSheet() {
-    // 每次打開視窗時，重置「加入圖片」按鈕的初始點擊事件
-    const labelBtn = document.querySelector('.file-input-label');
-    if (labelBtn) {
-      labelBtn.onclick = function(e) { openPhotoGallery(e); };
-    }
-
     document.getElementById('main-body').classList.add('sheet-open-post');
     document.body.style.overflow = 'hidden';
     
@@ -621,6 +643,7 @@
     selectedImageBase64 = "";
     const fileInput = document.getElementById('post-file');
     if (fileInput) fileInput.value = ""; 
+    document.getElementById('paste-box').value = "";
     document.getElementById('img-preview').src = "";
     document.getElementById('preview-container').style.display = 'none';
     
@@ -675,6 +698,7 @@
     selectedImageBase64 = "";
     const fileInput = document.getElementById('post-file');
     if (fileInput) fileInput.value = ""; 
+    document.getElementById('paste-box').value = "";
     document.getElementById('img-preview').src = "";
     document.getElementById('preview-container').style.display = 'none';
 
