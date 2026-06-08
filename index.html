@@ -98,13 +98,26 @@
     
     .upload-zone { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
     
-    /* 💡 改回最保險的標準排版，但透過下面的神奇 JS 來徹底切斷死鎖 */
+    .upload-buttons-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     .file-input-label {
       display: inline-flex; align-items: center; gap: 5px; color: #0095f6; 
       font-size: 14px; font-weight: bold; cursor: pointer; width: fit-content;
-      padding: 8px 12px; background: #f0f8ff; border-radius: 8px;
+      padding: 8px 14px; background: #f0f8ff; border-radius: 20px;
     }
     .file-input-label:active { background: #e0f0ff; }
+
+    /* 💡 應對手機卡死的 UX 救設：重置功能紐 */
+    .retry-upload-btn {
+      display: inline-flex; align-items: center; gap: 3px; color: #666;
+      font-size: 12px; cursor: pointer; padding: 6px 10px; background: #eee;
+      border-radius: 20px; font-weight: normal; border: none;
+    }
+    .retry-upload-btn:active { background: #ddd; }
 
     .image-preview-container { position: relative; display: none; width: 100px; height: 100px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
     .image-preview { width: 100%; height: 100%; object-fit: cover; }
@@ -173,9 +186,16 @@
     <textarea id="post-input" class="post-textarea" placeholder="在這裡輸入內容..." oninput="checkPostInput()"></textarea>
     
     <div class="upload-zone">
-      <div class="file-input-label" onclick="openPhotoGallery(event)">
-        <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        加入圖片
+      <div class="upload-buttons-container">
+        <div class="file-input-label" onclick="openPhotoGallery(event)">
+          <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          加入圖片
+        </div>
+        
+        <button class="retry-upload-btn" onclick="forceSystemReset(event)">
+          <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          點擊重試
+        </button>
       </div>
       
       <div id="input-box-wrapper">
@@ -232,17 +252,15 @@
     return 'post-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
   }
 
-  // 💡 終極修正函式：主動解除手機端焦點死鎖
+  // 💡 開啟相簿：先讓鍵盤收回，並清除舊 input
   function openPhotoGallery(e) {
     if(e) e.preventDefault();
     
-    // 1. 強制讓目前的輸入框失去焦點，這會強迫手機系統收起虛擬鍵盤，清除焦點鎖定狀態
     if (document.activeElement) {
       document.activeElement.blur();
     }
     document.getElementById('post-input').blur();
 
-    // 2. 徹底清空並重建 Input 欄位（雙重保險）
     const wrapper = document.getElementById('input-box-wrapper');
     wrapper.innerHTML = `<input type="file" id="post-file" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">`;
     
@@ -251,10 +269,25 @@
       previewPostImage(this);
     };
 
-    // 3. 延遲 50 毫秒（給手機鍵盤收合與系統層放寬防禦的時間），再正式呼叫相簿
     setTimeout(() => {
       fileInput.click();
-    }, 50);
+    }, 60);
+  }
+
+  // 💡 終極自救 UX：如果手機死當點不開，幫使用者把字存進記憶體，並刷新網頁清除死鎖核心
+  function forceSystemReset(e) {
+    if(e) e.preventDefault();
+    const currentText = document.getElementById('post-input').value;
+    
+    // 將當前輸入的文字暫存
+    if (currentText.trim().length > 0) {
+      sessionStorage.setItem('kfsh_pending_text', currentText);
+    }
+    // 標記需要自動重開彈窗
+    sessionStorage.setItem('kfsh_reopen_post', 'true');
+    
+    // 刷新網頁（徹底清空手機內建瀏覽器的死結快取）
+    window.location.reload();
   }
 
   function previewPostImage(input) {
@@ -288,6 +321,15 @@
   }
 
   async function init() {
+    // 💡 檢查是否有因死當而重新整理保留下來的文字
+    const savedText = sessionStorage.getItem('kfsh_pending_text');
+    const shouldReopen = sessionStorage.getItem('kfsh_reopen_post');
+    
+    if (savedText) {
+      document.getElementById('post-input').value = savedText;
+      sessionStorage.removeItem('kfsh_pending_text');
+    }
+
     if (supabaseClient) {
       const { data, error } = await supabaseClient.from('posts').select('*').limit(1);
       if (error) {
@@ -344,6 +386,13 @@
       }
     }
     renderFeed();
+
+    // 如果是為了修復死當而重整的，自動開回發文視窗
+    if (shouldReopen === 'true') {
+      sessionStorage.removeItem('kfsh_reopen_post');
+      openPostSheet();
+      checkPostInput();
+    }
   }
 
   async function fetchPosts() {
