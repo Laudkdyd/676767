@@ -16,15 +16,18 @@
       font-weight: bold; position: sticky; top: 0; z-index: 10; 
       box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
     }
+    
+    /* 💡 重新打造的貼文外框：強制放大，並加上 !important 確保不被其他樣式吃掉 */
     .post-card { 
-      background: white; 
-      width: 90%;             /* 💡 在小螢幕時左右保留點間距 */
-      max-width: 700px;       /* 💡 將原本的 500px 調寬至 700px（你可以自由改成 600px 或 800px） */
-      border-radius: 12px; 
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
-      margin: 20px 0; 
-      overflow: hidden; 
+      background: white !important; 
+      width: 92% !important;          /* 手機時左右留下一點點舒適間距 */
+      max-width: 800px !important;    /* 這裡改成 800px，讓大螢幕、平板與電腦版絕對夠寬 */
+      border-radius: 12px !important; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important; 
+      margin: 20px 0 !important; 
+      overflow: hidden !important; 
     }
+    
     .post-image { 
       width: 100%; min-height: 150px; height: auto; 
       background-color: #e9ecef; display: block; color: #212529; 
@@ -44,6 +47,7 @@
     .label { font-size: 10px; color: #606060; font-weight: 500; }
 
     @media (max-width: 600px) {
+      .post-card { width: 95% !important; } /* 手機版撐滿一點 */
       .interaction-group { gap: 25px !important; padding: 10px 15px !important; }
       .btn-wrapper { width: 55px !important; }
       .icon-btn { padding: 6px !important; }
