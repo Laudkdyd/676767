@@ -36,12 +36,24 @@
       overflow: hidden !important; 
     }
     
+    /* 修正：純文字貼文區塊強制置中與防破版 */
     .post-image { 
-      width: 100%; min-height: 100px; height: auto; 
-      background-color: #e9ecef; display: block; color: #212529; 
-      font-size: 20px; font-weight: 500; padding: 40px 30px; 
-      box-sizing: border-box; text-align: center; line-height: 1.6; 
-      word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;
+      width: 100%; 
+      min-height: 180px; 
+      height: auto; 
+      background-color: #e9ecef; 
+      color: #212529; 
+      font-size: 20px; 
+      font-weight: 500; 
+      padding: 30px; 
+      box-sizing: border-box; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      word-wrap: break-word; 
+      overflow-wrap: break-word; 
+      word-break: break-all;
     }
 
     .post-card-img {
@@ -50,12 +62,18 @@
       object-fit: cover;
       display: block;
     }
+
+    /* 修正：有圖片貼文的下方文字對齊與行高 */
     .post-card-text-with-img {
-      padding: 15px 20px;
+      padding: 16px 20px;
       font-size: 16px;
       color: #212529;
-      line-height: 1.5;
+      line-height: 1.6;
       background: white;
+      text-align: left;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      word-break: break-all;
     }
     
     .interaction-group { display: flex; gap: 15px; padding: 10px 15px; border-top: 1px solid #f0f2f5; }
@@ -414,7 +432,7 @@
   }
 
   async function fetchAllComments() {
-    const { data, error } = await supabaseClient.from('comments').select('*');
+    const { data, error = null } = await supabaseClient.from('comments').select('*');
     if (!error && data) {
       commentStore = {};
       data.forEach(c => {
@@ -633,7 +651,6 @@
     }
   }
 
-  // 移除了 offline 檢查阻礙，直接強制作動上傳
   async function submitPost() {
     const input = document.getElementById('post-input');
     const content = input.value.trim();
@@ -652,7 +669,6 @@
       const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
       
       try {
-        // 強制上傳雲端 Storage
         const { data: uploadData, error: uploadError } = await supabaseClient
           .storage
           .from('post-images')
