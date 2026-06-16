@@ -41,10 +41,10 @@
       background-color: #e9ecef; display: block; color: #212529; 
       font-size: 20px; font-weight: 500; padding: 40px 30px; 
       box-sizing: border-box; 
-      text-align: center;         /* 純文字貼文保持置中 */
+      text-align: center;         
       line-height: 1.6; 
       word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;
-      white-space: pre-wrap;      /* 保留內容換行 */
+      white-space: pre-line;      /* ✨ ✨ 改為 pre-line：消除干擾置中的隱形空白，並完美保留 Enter 換行 */
     }
 
     .post-card-img {
@@ -59,8 +59,8 @@
       color: #212529;
       line-height: 1.5;
       background: white;
-      text-align: left;           /* ✨ 整合修改：附圖貼文的文字靠左對齊，多行換行才漂亮 */
-      white-space: pre-wrap;      /* 保留內容換行 */
+      text-align: left;           
+      white-space: pre-wrap;      
     }
     
     .interaction-group { display: flex; gap: 15px; padding: 10px 15px; border-top: 1px solid #f0f2f5; }
@@ -96,7 +96,7 @@
     .comment-item { 
       padding: 10px; border-bottom: 1px solid #f9f9f9; font-size: 20px; line-height: 1.4; color: #333; 
       text-align: left;
-      white-space: pre-wrap;      /* 保留留言回覆的換行 */
+      white-space: pre-wrap;      
     }
     .no-comments { color: #aaa; text-align: center; margin-top: 50px; }
     .sheet-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; align-items: center; gap: 10px; background: white; flex-shrink: 0; box-sizing: border-box; }
@@ -590,7 +590,6 @@
   async function submitComment() {
     const input = document.getElementById('comment-input');
     const postId = currentActivePost.getAttribute('data-post-id');
-    // ✨ 整合修改：徹底清除留言前後多餘的連續換行與空格
     const text = input.value.replace(/^[\s\r\n]+|[\s\r\n]+$/g, '');
     if (!text) return;
 
@@ -645,7 +644,6 @@
 
   async function submitPost() {
     const input = document.getElementById('post-input');
-    // ✨ 整合修改：徹底清除貼文前後多餘的連續換行與空格，確保第一行完美置中
     const content = input.value.replace(/^[\s\r\n]+|[\s\r\n]+$/g, '');
     const fileInput = document.getElementById('post-file');
     
