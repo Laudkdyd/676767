@@ -36,15 +36,22 @@
       overflow: hidden !important;    
     }
     
+    /* ✨ 整合修改：改用 Flexbox 佈局，完美解決置中問題，並保留連續空白 */
     .post-image { 
       width: 100%; min-height: 100px; height: auto; 
-      background-color: #e9ecef; display: block; color: #212529; 
+      background-color: #e9ecef; color: #212529; 
       font-size: 20px; font-weight: 500; padding: 40px 30px; 
       box-sizing: border-box; 
-      text-align: center;         
+      
+      display: flex;              /* 啟用 flex */
+      flex-direction: column;
+      justify-content: center;    /* 垂直置中 */
+      align-items: center;        /* 水平置中 */
+      text-align: center;         /* 多行文字時內部置中 */
+      
       line-height: 1.6; 
       word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;
-      white-space: pre-line;      /* ✨ ✨ 改為 pre-line：消除干擾置中的隱形空白，並完美保留 Enter 換行 */
+      white-space: pre-wrap;      /* 改回 pre-wrap：多個連續空白不被吃掉 */
     }
 
     .post-card-img {
